@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import {useAuth} from '@/context/authContext';
 
 export default function Login() {
+    const {fetchData} = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,7 +28,7 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -37,7 +40,10 @@ export default function Login() {
         throw new Error(data.error || 'Login failed');
       }
 
-      localStorage.setItem('authToken', data.token);
+      //localStorage.setItem('authToken', data.token);
+
+      // Get connected user data
+      await fetchData();
 
       // Redirect to home after successful login
       router.push('/');
