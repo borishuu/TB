@@ -40,8 +40,6 @@ export default function Login() {
         throw new Error(data.error || 'Login failed');
       }
 
-      //localStorage.setItem('authToken', data.token);
-
       // Get connected user data
       await fetchData();
 
