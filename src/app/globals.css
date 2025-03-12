@@ -6,9 +6,9 @@
 
   /* Button Theme */
   --btn-bg: #97accf;
-  --btn-text: #000;
+  --btn-text: #fff;
   --btn-hover-bg: #7687a2;
-  --btn-hover-text: #000;
+  --btn-hover-text: #fff;
 }
 
 @theme inline {
