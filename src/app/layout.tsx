@@ -34,7 +34,7 @@ export default function RootLayout({
           <header>
             <Nav/>
           </header>
-          <main className="mt-20">
+          <main className="pt-24">
             {children}
           </main>
         </div>

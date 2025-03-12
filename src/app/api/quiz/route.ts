@@ -13,49 +13,55 @@ const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string
 
 // TODO: dynamically adapt schema based on user input
 const quizSchema: Schema = {
-    type: SchemaType.ARRAY,
-    minItems: 10,
-    description: "Array of questions for the quiz.",
-    items: {
-        type: SchemaType.OBJECT,
-        properties: {
-            number: {
-                type: SchemaType.STRING,
-                description: "The question number.",
-                nullable: false
-            },
-            questionText: {
-                type: SchemaType.STRING,
-                description: "The text of the question.",
-                nullable: false
-            },
-            questionType: {
-                type: SchemaType.STRING,
-                format: "enum",
-                description: "The type of the question.",
-                enum: ["mcq", "open", "codeComprehension", "codeWriting"],
-                nullable: false
-            },
-            options: {
-                type: SchemaType.ARRAY,
-                description: "Array of answer options for multiple choice questions.",
-                items: {
-                type: SchemaType.STRING
+    type: SchemaType.OBJECT,
+    properties: {
+        content: {
+            type: SchemaType.ARRAY,
+            minItems: 10,
+            description: "Array of questions for the quiz.",
+            items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    number: {
+                        type: SchemaType.STRING,
+                        description: "The question number.",
+                        nullable: false
+                    },
+                    questionText: {
+                        type: SchemaType.STRING,
+                        description: "The text of the question.",
+                        nullable: false
+                    },
+                    questionType: {
+                        type: SchemaType.STRING,
+                        format: "enum",
+                        description: "The type of the question.",
+                        enum: ["mcq", "open", "codeComprehension", "codeWriting"],
+                        nullable: false
+                    },
+                    options: {
+                        type: SchemaType.ARRAY,
+                        description: "Array of answer options for multiple choice questions.",
+                        items: {
+                        type: SchemaType.STRING
+                        },
+                        minItems: 0
+                    },
+                    correctAnswer: {
+                        type: SchemaType.STRING,
+                        description: "The correct answer for the question.",
+                        nullable: false
+                    },
+                    explanation: {
+                        type: SchemaType.STRING,
+                        description: "An explanation for the correct answer."
+                    }
                 },
-                minItems: 0
-            },
-            correctAnswer: {
-                type: SchemaType.STRING,
-                description: "The correct answer for the question.",
-                nullable: false
-            },
-            explanation: {
-                type: SchemaType.STRING,
-                description: "An explanation for the correct answer."
+                required: ["number", "questionText", "questionType", "correctAnswer"],
             }
-        },
-        required: ["number", "questionText", "questionType", "correctAnswer"],
-    }
+        }
+    },
+    required: ["content"],
 };
 
 
@@ -148,9 +154,8 @@ ${contextText}
 - L'ordre des questions doit être indépendant de l'ordre des chapitres fournis.
 - Assurez-vous que les questions couvrent les concepts du résumé.
 - Variez le type de questions : QCM, questions ouvertes, compréhension de code, écriture de code.
-- Les exercices doivent être difficiles est doivent nécessiter beaucoup de reflexion.
 - La quantité des différents types de questions doit être équilibrée.
-- Mélangez les thèmes et variez la difficulté des questions.`;
+- Les exercices doivent être difficiles est doivent nécessiter beaucoup de reflexion.`;
 
         /*const quizResult = await model.generateContent([
             quizPrompt,
@@ -172,17 +177,6 @@ ${contextText}
         console.log("Phase 2 Completed: Quiz generated.");
 
         console.log(quizText)
-
-
-        /*
-        model Quiz {
-            id        Int     @id @default(autoincrement())
-            title     String
-            content   Json?
-            authorId  Int
-            author    User   @relation(fields: [authorId], references: [id])
-            }
-        */
 
         await prisma.quiz.create({
             data: {

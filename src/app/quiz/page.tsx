@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import QuizCard from '@/components/QuizCard';
 
-// TODO: Put all types in type file
 interface Quiz {
-    id: string;
+    id: number;
     title: string;
+    content: any;
 }
 
 export default function QuizDashboard() {
@@ -17,9 +18,13 @@ export default function QuizDashboard() {
     useEffect(() => {
         const fetchQuizzes = async () => {
             try {
-                //const response = await fetch('/api/quiz');
-                //const data = await response.json();
-                //setQuizzes(data);
+                const response = await fetch('/api/user/quiz'); // Adjust API route if needed
+                if (response.ok) {
+                    const data = await response.json();
+                    setQuizzes(data);
+                } else {
+                    console.error('Failed to fetch quizzes');
+                }
             } catch (error) {
                 console.error('Error fetching quizzes:', error);
             } finally {
@@ -29,51 +34,38 @@ export default function QuizDashboard() {
         fetchQuizzes();
     }, []);
 
-    const filteredQuizzes = quizzes.filter(quiz => quiz.title.toLowerCase().includes(search.toLowerCase()));
+    const filteredQuizzes = quizzes.filter(quiz =>
+        quiz.title.toLowerCase().includes(search.toLowerCase())
+    );
 
     return (
-            <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
-                <h1 className="text-2xl font-bold text-center mb-4">Quiz Dashboard</h1>
+        <div className="max-w-full mx-auto bg-white p-6 rounded-lg shadow-md">
+            <h1 className="text-2xl font-bold text-center mb-4">Quiz Dashboard</h1>
 
-                <div className="flex justify-between mb-4">
-                    <input
-                        type="text"
-                        placeholder="Search quizzes..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-2/3 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                    <Link href="/quiz/create" className="button">+ Create Quiz</Link>
-                </div>
-
-                {loading ? (
-                    <p className="text-center">Loading quizzes...</p>
-                ) : (
-                    <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                            <tr className="bg-gray-200">
-                                <th className="border p-2">Title</th>
-                                <th className="border p-2">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredQuizzes.length > 0 ? (
-                                filteredQuizzes.map((quiz) => (
-                                    <tr key={quiz.id} className="text-center">
-                                        <td className="border p-2">{quiz.title}</td>
-                                        <td className="border p-2">
-                                            <Link href={`/quiz/${quiz.id}`} className="text-blue-600 underline">View</Link>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={3} className="text-center p-4">No quizzes found.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
+            <div className="flex justify-between mb-4">
+                <input
+                    type="text"
+                    placeholder="Search quizzes..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-2/3 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <Link href="/quiz/create" className="button">
+                    + Create Quiz
+                </Link>
             </div>
+
+            {loading ? (
+                <p className="text-center">Loading quizzes...</p>
+            ) : filteredQuizzes.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredQuizzes.map((quiz) => (
+                        <QuizCard key={quiz.id} quiz={quiz} />
+                    ))}
+                </div>
+            ) : (
+                <p className="text-center">No quizzes found.</p>
+            )}
+        </div>
     );
 }
