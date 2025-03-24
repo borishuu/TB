@@ -9,7 +9,7 @@ import path from 'path';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
 
-// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, validator json, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
+// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
 const quizSchema: Schema = {
     type: SchemaType.OBJECT,
     properties: {
@@ -62,6 +62,7 @@ const quizSchema: Schema = {
     required: ["content"],
 };
 
+const genModel = 'models/gemini-2.0-flash'
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
@@ -128,7 +129,7 @@ Analysez le contenu des fichiers fournis et générez un résumé structuré des
 - Présentez le résumé sous une forme organisée et lisible.
         `;
 
-        const contextModel = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
+        const contextModel = genAI.getGenerativeModel({ model: genModel });
 
         // Generate context with uploaded files
 
@@ -161,7 +162,7 @@ ${contextText}
             ...exercices.map(exercice => ({ fileData: exercice }))
         ]);*/
         const quizModel = genAI.getGenerativeModel({
-            model: 'models/gemini-2.0-flash',
+            model: genModel,
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: quizSchema
@@ -188,6 +189,11 @@ ${contextText}
             data: {
                 title: title,
                 content: quizJSON,
+                prompts: JSON.parse(JSON.stringify({
+                    contextPrompt: contextPrompt,
+                    quizPrompt: quizPrompt
+                })),
+                genModel: genModel,
                 author: {connect: {id: userId as number}},
             },
         });
