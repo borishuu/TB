@@ -62,6 +62,7 @@ const quizSchema: Schema = {
     required: ["content"],
 };
 
+const genModel = 'models/gemini-2.0-flash'
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
@@ -128,7 +129,7 @@ Analysez le contenu des fichiers fournis et générez un résumé structuré des
 - Présentez le résumé sous une forme organisée et lisible.
         `;
 
-        const contextModel = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
+        const contextModel = genAI.getGenerativeModel({ model: genModel });
 
         // Generate context with uploaded files
 
@@ -161,7 +162,7 @@ ${contextText}
             ...exercices.map(exercice => ({ fileData: exercice }))
         ]);*/
         const quizModel = genAI.getGenerativeModel({
-            model: 'models/gemini-2.0-flash',
+            model: genModel,
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: quizSchema
@@ -188,10 +189,11 @@ ${contextText}
             data: {
                 title: title,
                 content: quizJSON,
-                prompts: JSON.stringify({
+                prompts: JSON.parse(JSON.stringify({
                     contextPrompt: contextPrompt,
                     quizPrompt: quizPrompt
-                }),
+                })),
+                genModel: genModel,
                 author: {connect: {id: userId as number}},
             },
         });
