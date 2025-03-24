@@ -16,7 +16,7 @@ const NAV_ITEMS_DISCONNECTED = [
 ];
 
 const NAV_ITEMS_CONNECTED = [
-  { href: '/quiz', label: 'Generate Quiz' },
+  { href: '/quiz', label: 'My Quizzes' },
 ];
 
 const NavLink = ({ href, label, isActive }: { href: string; label: string; isActive: boolean }) => (
@@ -47,7 +47,7 @@ export default function Nav() {
 };
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-[#3e4756] text-white shadow-md z-50 py-4 px-6">
+    <nav className="absolute top-0 left-0 w-full bg-[#3e4756] text-white shadow-md z-50 py-4 px-6">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         {/* Left side */}
         <Link href="/" className="text-2xl font-bold">
