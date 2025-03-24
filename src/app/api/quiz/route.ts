@@ -9,7 +9,7 @@ import path from 'path';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
 
-// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, validator json, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
+// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
 const quizSchema: Schema = {
     type: SchemaType.OBJECT,
     properties: {
@@ -188,6 +188,10 @@ ${contextText}
             data: {
                 title: title,
                 content: quizJSON,
+                prompts: JSON.stringify({
+                    contextPrompt: contextPrompt,
+                    quizPrompt: quizPrompt
+                }),
                 author: {connect: {id: userId as number}},
             },
         });
