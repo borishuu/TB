@@ -1,5 +1,3 @@
-import bcrypt from 'bcrypt';
-import {SignJWT} from 'jose';
 import {NextRequest, NextResponse} from 'next/server';
 import { GoogleGenerativeAI, ObjectSchema, Schema, SchemaType } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
@@ -11,7 +9,7 @@ import path from 'path';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
 
-// TODO: dynamically adapt schema based on user input
+// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, validator json, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
 const quizSchema: Schema = {
     type: SchemaType.OBJECT,
     properties: {
@@ -130,9 +128,10 @@ Analysez le contenu des fichiers fournis et générez un résumé structuré des
 - Présentez le résumé sous une forme organisée et lisible.
         `;
 
-        const contextModel = genAI.getGenerativeModel({ model: 'models/gemini-1.5-flash' });
+        const contextModel = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
 
         // Generate context with uploaded files
+
         const contextResult = await contextModel.generateContent([
             contextPrompt,
             ...fileUploadResults.map(uploadResult => ({ fileData: {
@@ -162,7 +161,7 @@ ${contextText}
             ...exercices.map(exercice => ({ fileData: exercice }))
         ]);*/
         const quizModel = genAI.getGenerativeModel({
-            model: 'models/gemini-1.5-flash',
+            model: 'models/gemini-2.0-flash',
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: quizSchema
@@ -176,12 +175,19 @@ ${contextText}
         const quizText = quizResult.response.text();
         console.log("Phase 2 Completed: Quiz generated.");
 
-        console.log(quizText)
+        // Ensure quizText is valid JSON before saving
+        let quizJSON;
+        try {
+            quizJSON = JSON.parse(quizText);
+        } catch (error) {
+            console.error("Invalid JSON format:", error);
+            return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
+        }
 
         await prisma.quiz.create({
             data: {
                 title: title,
-                content: quizText,
+                content: quizJSON,
                 author: {connect: {id: userId as number}},
             },
         });
