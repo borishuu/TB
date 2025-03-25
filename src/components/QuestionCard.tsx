@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/solid';
+import { ParamValue } from 'next/dist/server/request/params';
 
 interface Question {
     number: string;
@@ -12,7 +13,7 @@ interface Question {
     explanation?: string;
 }
 
-export default function QuestionCard({ baseQuestion }: { baseQuestion: Question }) {
+export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Question, quizId: ParamValue }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [question, setQuestion] = useState<Question>(baseQuestion);
@@ -30,10 +31,25 @@ export default function QuestionCard({ baseQuestion }: { baseQuestion: Question 
     };
 
     // Handle save
-    const handleSave = () => {
-        console.log("Updated Question:", question);
-        setQuestion(editQuestion);
-        setIsEditing(false);
+    const handleSave = async () => {
+        try {
+            // Make an API call to update the question.
+            const response = await fetch(`/api/quiz/${quizId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({editQuestion})
+            });
+            if (!response.ok) {
+                throw new Error('Failed to update question');
+            }
+            const updatedQuestion: Question = await response.json();
+            setQuestion(editQuestion);
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Error saving question:", error);
+        }
     };
 
     // Handle edit cancellation
@@ -41,16 +57,6 @@ export default function QuestionCard({ baseQuestion }: { baseQuestion: Question 
         //setQuestion(question);
         setIsEditing(false);
     }
-    
-    /*if (!question) {
-        return <p>Loading question...</p>;
-    }
-
-    useEffect(() => {
-        if (baseQuestion) {
-            setQuestion(baseQuestion);
-        }
-    }, [baseQuestion]);*/
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 pb-10 border border-gray-200 hover:shadow-xl transition relative">
@@ -60,7 +66,7 @@ export default function QuestionCard({ baseQuestion }: { baseQuestion: Question 
                         type="text"
                         value={editQuestion.questionText}
                         onChange={(e) => handleChange("questionText", e.target.value)}
-                        className="border p-1 rounded w-full"
+                        className="border p-1 rounded w-full max-w-2xl"
                     />
                 ) : (
                     <p className="font-semibold max-w-2xl">{question.number}. {question.questionText}</p>
@@ -71,7 +77,7 @@ export default function QuestionCard({ baseQuestion }: { baseQuestion: Question 
             {question.questionType === 'mcq' && (
                 <ul className="mt-2 space-y-1">
                     {isEditing ? (
-                        question.options?.map((option, idx) => (
+                        editQuestion.options?.map((option, idx) => (
                             <input
                                 key={idx}
                                 type="text"
