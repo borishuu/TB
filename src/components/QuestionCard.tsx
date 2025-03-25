@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/solid';
 
 interface Question {
@@ -12,21 +12,45 @@ interface Question {
     explanation?: string;
 }
 
-export default function QuestionCard({ question }: { question: Question }) {
+export default function QuestionCard({ baseQuestion }: { baseQuestion: Question }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [editedQuestion, setEditedQuestion] = useState<Question>(question);
+    const [question, setQuestion] = useState<Question>(baseQuestion);
+    const [editQuestion, setEditQuestion] = useState<Question>(baseQuestion);
 
     // Handle input changes
     const handleChange = (field: keyof Question, value: string | string[]) => {
-        setEditedQuestion(prev => ({ ...prev, [field]: value }));
+        setEditQuestion(prev => ({ ...prev, [field]: value }));
     };
 
-    // Handle save action
+    // Start edit
+    const startEdit = () => {
+        setEditQuestion(question);
+        setIsEditing(true);
+    };
+
+    // Handle save
     const handleSave = () => {
-        console.log("Updated Question:", editedQuestion); // Replace with API call
+        console.log("Updated Question:", question);
+        setQuestion(editQuestion);
         setIsEditing(false);
     };
+
+    // Handle edit cancellation
+    const handleEditCancel = () => {
+        //setQuestion(question);
+        setIsEditing(false);
+    }
+    
+    /*if (!question) {
+        return <p>Loading question...</p>;
+    }
+
+    useEffect(() => {
+        if (baseQuestion) {
+            setQuestion(baseQuestion);
+        }
+    }, [baseQuestion]);*/
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 pb-10 border border-gray-200 hover:shadow-xl transition relative">
@@ -34,7 +58,7 @@ export default function QuestionCard({ question }: { question: Question }) {
                 {isEditing ? (
                     <input
                         type="text"
-                        value={editedQuestion.questionText}
+                        value={editQuestion.questionText}
                         onChange={(e) => handleChange("questionText", e.target.value)}
                         className="border p-1 rounded w-full"
                     />
@@ -47,13 +71,13 @@ export default function QuestionCard({ question }: { question: Question }) {
             {question.questionType === 'mcq' && (
                 <ul className="mt-2 space-y-1">
                     {isEditing ? (
-                        editedQuestion.options?.map((option, idx) => (
+                        question.options?.map((option, idx) => (
                             <input
                                 key={idx}
                                 type="text"
                                 value={option}
                                 onChange={(e) => {
-                                    const newOptions = [...(editedQuestion.options || [])];
+                                    const newOptions = [...(editQuestion.options || [])];
                                     newOptions[idx] = e.target.value;
                                     handleChange("options", newOptions);
                                 }}
@@ -80,7 +104,7 @@ export default function QuestionCard({ question }: { question: Question }) {
                     {isEditing ? (
                         <input
                             type="text"
-                            value={editedQuestion.correctAnswer}
+                            value={editQuestion.correctAnswer}
                             onChange={(e) => handleChange("correctAnswer", e.target.value)}
                             className="border p-1 rounded w-full"
                         />
@@ -100,10 +124,7 @@ export default function QuestionCard({ question }: { question: Question }) {
                             Save
                         </button>
                         <button
-                            onClick={() => {
-                                setEditedQuestion(question);
-                                setIsEditing(false);
-                            }}
+                            onClick={handleEditCancel}
                             className="bg-gray-500 text-white px-3 py-1 rounded"
                         >
                             Cancel
@@ -111,7 +132,7 @@ export default function QuestionCard({ question }: { question: Question }) {
                     </div>
                 ) : (
                     <button
-                        onClick={() => setIsEditing(true)}
+                        onClick={startEdit}
                         className="text-black px-3 py-1 rounded flex items-center space-x-2"
                     >
                         <PencilIcon className="w-5 h-5" /> <span>Edit</span>
