@@ -1,9 +1,16 @@
 import { prisma } from '@/lib/prisma';
+import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest, context: { params: { id: string } }) {
     try {
+        // Ensure only a logged in user can call this route
+        const { userId, error } = await verifyAuth(request);
+
+        if (error) {
+            return NextResponse.json({ error }, { status: 401 });
+        }
         
         const { id } = await context.params;
         const quizId = parseInt(id, 10);
@@ -27,6 +34,13 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {
     try {
+        // Ensure only a logged in user can call this route
+        const { userId, error } = await verifyAuth(request);
+
+        if (error) {
+            return NextResponse.json({ error }, { status: 401 });
+        }
+
         const { id } = await context.params;
         const quizId = parseInt(id, 10);
         if (isNaN(quizId)) {

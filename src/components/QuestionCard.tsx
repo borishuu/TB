@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TrashIcon, PencilIcon } from '@heroicons/react/24/solid';
+import { useState } from 'react';
+import { TrashIcon, PencilIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { ParamValue } from 'next/dist/server/request/params';
 
 interface Question {
@@ -16,35 +16,33 @@ interface Question {
 export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Question, quizId: ParamValue }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [regenState, setRegentState] = useState(false);
+    const [isRegenerating, setIsRegenerating] = useState(false);
     const [question, setQuestion] = useState<Question>(baseQuestion);
     const [editQuestion, setEditQuestion] = useState<Question>(baseQuestion);
+    const [regenPrompt, setRegenPrompt] = useState('');
 
-    // Handle input changes
     const handleChange = (field: keyof Question, value: string | string[]) => {
         setEditQuestion(prev => ({ ...prev, [field]: value }));
     };
 
-    // Start edit
     const startEdit = () => {
         setEditQuestion(question);
         setIsEditing(true);
     };
 
-    // Handle save
     const handleSave = async () => {
         try {
-            // Make an API call to update the question.
             const response = await fetch(`/api/quiz/${quizId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({editQuestion})
+                body: JSON.stringify({ editQuestion })
             });
             if (!response.ok) {
                 throw new Error('Failed to update question');
             }
-            const updatedQuestion: Question = await response.json();
             setQuestion(editQuestion);
             setIsEditing(false);
         } catch (error) {
@@ -52,11 +50,36 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
         }
     };
 
-    // Handle edit cancellation
     const handleEditCancel = () => {
-        //setQuestion(question);
         setIsEditing(false);
+    };
+
+    const startRegenState = () => {
+        setRegentState(true);
     }
+
+    const handleRegenerate = async () => {
+        try {
+            setIsRegenerating(true);
+            const response = await fetch(`/api/quiz/${quizId}/regenerate`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: regenPrompt, questionNumber: question.number })
+            });
+            if (!response.ok) {
+                throw new Error('Failed to regenerate question');
+            }
+            const newQuestion: Question = await response.json();
+            console.log(newQuestion);
+            setQuestion(newQuestion);
+            setIsRegenerating(false);
+        } catch (error) {
+            console.error("Error regenerating question:", error);
+            setIsRegenerating(false);
+        }
+    };
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 pb-10 border border-gray-200 hover:shadow-xl transition relative">
@@ -120,30 +143,45 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                 </div>
             )}
 
-            <div className="absolute bottom-2 right-2">
-                {isEditing ? (
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={handleSave}
-                            className="bg-green-500 text-white px-3 py-1 rounded"
-                        >
-                            Save
-                        </button>
-                        <button
-                            onClick={handleEditCancel}
-                            className="bg-gray-500 text-white px-3 py-1 rounded"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={startEdit}
-                        className="text-black px-3 py-1 rounded flex items-center space-x-2"
+            {regenState && (
+                <div className="mt-2">
+                    <input 
+                        type="text" 
+                        placeholder="What would you like to imrprove?" 
+                        value={regenPrompt} 
+                        onChange={(e) => setRegenPrompt(e.target.value)} 
+                        className="border p-1 rounded w-full"
+                    />
+                    <button 
+                        onClick={handleRegenerate} 
+                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-2"
+                        disabled={isRegenerating}
                     >
-                        <PencilIcon className="w-5 h-5" /> <span>Edit</span>
+                        <ArrowPathIcon className="w-5 h-5" /> <span>{isRegenerating ? 'Regenerating...' : 'Regenerate'}</span>
                     </button>
+                </div>
+            )}
+
+            <div className="absolute bottom-2 right-2 flex space-x-2">
+                {isEditing ? (
+                    <>
+                        <button onClick={handleSave} className="bg-green-500 text-white px-3 py-1 rounded">Save</button>
+                        <button onClick={handleEditCancel} className="bg-gray-500 text-white px-3 py-1 rounded">Cancel</button>
+                    </>
+                ) : (
+                    <>
+                        <button onClick={startEdit} className="text-black px-3 py-1 rounded flex items-center space-x-2">
+                            <PencilIcon className="w-5 h-5" /> <span>Edit</span>
+                        </button>                       
+                    </>
                 )}
+
+                <button 
+                    onClick={() => setRegentState(!regenState)}
+                    className="text-black px-3 py-1 rounded flex items-center space-x-2"
+                >
+                    <ArrowPathIcon className="w-5 h-5" /> <span>Demand regeneration</span>
+                </button>
             </div>
         </div>
     );
