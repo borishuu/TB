@@ -49,7 +49,7 @@ export default function QuizPage() {
             <h1 className="text-2xl font-bold text-center mb-4">{quiz.title}</h1>
             <div className="space-y-6">
                 {quiz.content.content.map((question, index) => (
-                    <QuestionCard key={index} question={question} />
+                    <QuestionCard key={index} baseQuestion={question} quizId={id} />
                 ))}
             </div>
         </div>
