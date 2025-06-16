@@ -49,18 +49,18 @@ const questionSchema: Schema = {
     required: ["number", "questionText", "questionType", "correctAnswer"]
 };
 
-// TODO provide json schema
+
 async function generateNewQuestion(prompt: string, question: any) {
     const questionRegenPrompt = `
 Tu es un générateur de quiz intelligent. Ta tâche est d'améliorer la question fournie en suivant précisément ces consignes : 
 
-1. Respecte le format : Garde le même type de question (${question.questionType}).
-2. Améliore la clarté et la pertinence : Reformule si nécessaire pour plus de précision et d'intelligibilité.
-3. Respecte les contraintes utilisateu : Applique ces modifications demandées : "${prompt}".
+- Respecte le format : Garde le même type de question (${question.questionType}).
+- Améliore la clarté et la pertinence : Reformule si nécessaire pour plus de précision et d'intelligibilité.
+- Respecte les contraintes utilisateur : Applique ces modifications demandées : "${prompt}".
 
 Question originale à améliorer :  
 ${JSON.stringify(question)}
-    `;
+`;
 
     const regenModel = genAI.getGenerativeModel({
         model: 'models/gemini-2.0-flash',

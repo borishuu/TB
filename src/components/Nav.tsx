@@ -7,7 +7,7 @@ import {useRouter} from "next/navigation";
 import { useAuth } from '@/context/authContext';
 
 const NAV_ITEMS_PUBLIC = [
-  { href: '/', label: 'Home' },
+  { href: '/', label: 'Accueil' },
 ];
 
 const NAV_ITEMS_DISCONNECTED = [
@@ -16,7 +16,8 @@ const NAV_ITEMS_DISCONNECTED = [
 ];
 
 const NAV_ITEMS_CONNECTED = [
-  { href: '/quiz', label: 'My Quizzes' },
+  { href: '/quiz', label: 'Mes Evaluations' },
+  { href: '/files', label: 'Mes Fichiers' },
 ];
 
 const NavLink = ({ href, label, isActive }: { href: string; label: string; isActive: boolean }) => (
@@ -51,7 +52,7 @@ export default function Nav() {
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         {/* Left side */}
         <Link href="/" className="text-2xl font-bold">
-          Quiz Generator
+          Evagen
         </Link>
 
         {/* Right side */}

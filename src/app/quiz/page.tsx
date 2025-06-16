@@ -18,7 +18,7 @@ export default function QuizDashboard() {
     useEffect(() => {
         const fetchQuizzes = async () => {
             try {
-                const response = await fetch('/api/user/quiz'); // Adjust API route if needed
+                const response = await fetch('/api/user/quiz');
                 if (response.ok) {
                     const data = await response.json();
                     setQuizzes(data);
@@ -40,18 +40,18 @@ export default function QuizDashboard() {
 
     return (
         <div className="max-w-full mx-auto bg-white p-6 rounded-lg shadow-md">
-            <h1 className="text-2xl font-bold text-center mb-4">Quiz Dashboard</h1>
+            <h1 className="text-2xl font-bold text-center mb-4">Mes évaluations</h1>
 
             <div className="flex justify-between mb-4">
                 <input
                     type="text"
-                    placeholder="Search quizzes..."
+                    placeholder="Rechercher..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-2/3 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <Link href="/quiz/create" className="button">
-                    + Create Quiz
+                    + Nouveau
                 </Link>
             </div>
 

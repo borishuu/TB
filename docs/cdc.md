@@ -122,12 +122,16 @@ Tâche : Stockage et indexation des fichiers dans pgvector, priorité : 1, duré
 Tâche : Implémentation de la suppression/modification des fichiers, priorité : 3, durée estimée : 14 heures, catégorie : Gestion des fichiers
 Tâche : Implémentation de génération d'évaluation à partir d'un prompt utilisateur, priorité : 1, durée estimée : 24 heures, catégorie : Génération d'évaluations
 Tâche : Implémentation de génération d'évaluation inspirées d'un fichier d'évaluation fourni, priorité : 2, durée estimée : 24 heures, catégorie : Génération d'évaluations
+
 Tâche : Implémentation des options de générations (types de questions, difficulté), priorité : 2, durée estimée : 14 heures, catégorie : Génération d'évaluations
 Tâche : Implémentation de regénération de question à partir de feedback utilisateur, priorité : 2, durée estimée : 14 heures, catégorie : Génération d'évaluations
+
 Tâche : Implémentation de système d'ajout de question avec un prompt utilisateur, priorité : 3, durée estimée : 10 heures, catégorie : Gestion + génération d'évaluations
 Tâche : Implémentation du tableau de bord utilisateur, priorité : 2, durée estimée : 24 heures, catégorie : Gestion d'évaluations
+
 Tâche : Implémentation de la modification/suppression de questions, priorité : 3, durée estimée : 8 heures, catégorie : Gestion d'évaluations
 Tâche : Implémentation de mode "test" d'évaluation, priorité : 3, durée estimée : 24 heures, catégorie : Gestion d'évaluations
+
 Tâche : Implémentation de la correction automatique des réponses utilisateurs, priorité : 3, durée estimée : 24 heures, catégorie : Gestion d'évaluations
 Tâche : Implémentation du mode affichage (questions + réponses), priorité : 1, durée estimée : 6 heures, catégorie : Gestion d'évaluations
 Tâche : Implémentation sauvegarde des évaluations en fichier local, priorité : 3, durée estimée : 12 heures, catégorie : Gestion d'évaluations
