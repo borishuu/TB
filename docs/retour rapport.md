@@ -16,7 +16,7 @@
 
 - prompt engineering trop tableau
 
-- pour comparaison des plateformes, mettre annexe vu que j'ai fait une partie "recherche", montrer concretement le problème
+- pour comparaison des plateformes, mettre annexe vu que j'ai fait une partie "recherche", montrer concretement le problème avec examples
 
 - questiongen.ai
 
