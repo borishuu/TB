@@ -120,6 +120,8 @@ export async function POST(request: NextRequest) {
         );
 
         console.log("Starting Phase 1: Generating context...");
+        const contextModel = genAI.getGenerativeModel({ model: genModel });
+
         const contextPrompt = `
 Analysez le contenu des fichiers fournis et générez un résumé structuré des concepts clés abordés.
 - Mélangez les thèmes des différents fichiers de manière cohérente.
@@ -129,10 +131,7 @@ Analysez le contenu des fichiers fournis et générez un résumé structuré des
 - Présentez le résumé sous une forme organisée et lisible.
         `;
 
-        const contextModel = genAI.getGenerativeModel({ model: genModel });
-
         // Generate context with uploaded files
-
         const contextResult = await contextModel.generateContent([
             contextPrompt,
             ...fileUploadResults.map(uploadResult => ({ fileData: {
@@ -143,10 +142,16 @@ Analysez le contenu des fichiers fournis et générez un résumé structuré des
         
         const contextText = contextResult.response.text();
         console.log("Phase 1 Completed: Context generated.");
+        console.log("Context:", contextText);
 
         console.log("Starting Phase 2: Generating quiz...");
+        /*const quizResult = await model.generateContent([
+            quizPrompt,
+            ...exercices.map(exercice => ({ fileData: exercice }))
+        ]);*/
+
         const quizPrompt = `
-Générez un quiz basé sur le résumé suivant, et en vous inspirant des séries d'exercices fournis (sans les recopier) :
+Générez un quiz basé sur le résumé suivant :
 
 ${contextText}
 
@@ -157,10 +162,6 @@ ${contextText}
 - La quantité des différents types de questions doit être équilibrée.
 - Les exercices doivent être difficiles est doivent nécessiter beaucoup de reflexion.`;
 
-        /*const quizResult = await model.generateContent([
-            quizPrompt,
-            ...exercices.map(exercice => ({ fileData: exercice }))
-        ]);*/
         const quizModel = genAI.getGenerativeModel({
             model: genModel,
             generationConfig: {

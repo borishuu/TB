@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["content"],
+  "properties": {
+    "content": {
+      "type": "array",
+      "description": "Array of questions for the quiz.",
+      "items": {
+        "type": "object",
+        "required": ["number", "questionText", "questionType", "correctAnswer", "explanation"],
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "The question number."
+          },
+          "questionText": {
+            "type": "string",
+            "description": "The text of the question."
+          },
+          "questionType": {
+            "type": "string",
+            "description": "The type of the question.",
+            "enum": ["mcq", "open", "codeComprehension", "codeWriting"]
+          },
+          "options": {
+            "type": "array",
+            "description": "Array of answer options for multiple choice questions.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 0
+          },
+          "correctAnswer": {
+            "type": "string",
+            "description": "The correct answer for the question."
+          },
+          "explanation": {
+            "type": "string",
+            "description": "An explanation for the correct answer."
+          }
+        }
+      }
+    }
+  }
+}

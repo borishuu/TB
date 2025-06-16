@@ -55,30 +55,30 @@ export default function CreateQuiz() {
   return (
     <div className="flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-xl">
-        <h2 className="text-2xl font-bold text-center mb-6">Generate Quiz</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">Generer une évaluation</h2>
 
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Title</label>
+            <label className="block text-sm font-medium text-gray-700">Titre</label>
             <input
               type="text"
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter quiz title"
+              placeholder="Titre de l'évaluation"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Upload Files</label>
+            <label className="block text-sm font-medium text-gray-700">Uploader fichiers</label>
             <button
               type="button"
               className="button"
               onClick={() => document.getElementById('fileInput')?.click()}
             >
-              Upload File
+              Uploader fichiers
             </button>
             <input
               id="fileInput"
@@ -100,7 +100,7 @@ export default function CreateQuiz() {
                       onClick={() => removeFile(index)}
                       className="text-red-500 hover:text-red-700 text-sm"
                     >
-                      Remove
+                      Supprimer
                     </button>
                   </li>
                 ))}
@@ -113,7 +113,7 @@ export default function CreateQuiz() {
             className="w-full button"
             disabled={loading}
           >
-            {loading ? 'Generating...' : 'Generate'}
+            {loading ? 'Génération...' : 'Générer'}
           </button>
         </form>
       </div>

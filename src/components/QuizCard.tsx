@@ -21,7 +21,7 @@ export default function QuizCard({ quiz }: { quiz: Quiz }) {
                 className="mt-3 button"
                 onClick={() => router.push(`/quiz/${quiz.id}`)}
             >
-                View Quiz
+                Afficher
             </button>
         </div>
     );

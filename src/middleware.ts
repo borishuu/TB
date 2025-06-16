@@ -8,7 +8,6 @@ export async function middleware(req: NextRequest) {
     const hiddenToConnectedUsers = path === '/login' || path === '/register';
     const token = req.cookies.get('authToken')?.value;
 
-    console.log(path);
     if (!token && !isPublicPath)
         return NextResponse.redirect(new URL('/login', req.url));
     else if (token) {
