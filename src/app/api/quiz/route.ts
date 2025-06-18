@@ -1,207 +1,209 @@
-import {NextRequest, NextResponse} from 'next/server';
-import { GoogleGenerativeAI, ObjectSchema, Schema, SchemaType } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { Mistral } from '@mistralai/mistralai';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-import fs from 'fs';
-import path from 'path';
+import pdfParse from 'pdf-parse';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
-const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
+const mistral = new Mistral({
+  apiKey: process.env.MISTRAL_API_KEY!,
+});
 
-// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
-const quizSchema: Schema = {
-    type: SchemaType.OBJECT,
-    properties: {
-        content: {
-            type: SchemaType.ARRAY,
-            minItems: 10,
-            description: "Array of questions for the quiz.",
-            items: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    number: {
-                        type: SchemaType.STRING,
-                        description: "The question number.",
-                        nullable: false
-                    },
-                    questionText: {
-                        type: SchemaType.STRING,
-                        description: "The text of the question.",
-                        nullable: false
-                    },
-                    questionType: {
-                        type: SchemaType.STRING,
-                        format: "enum",
-                        description: "The type of the question.",
-                        enum: ["mcq", "open", "codeComprehension", "codeWriting"],
-                        nullable: false
-                    },
-                    options: {
-                        type: SchemaType.ARRAY,
-                        description: "Array of answer options for multiple choice questions.",
-                        items: {
-                        type: SchemaType.STRING
-                        },
-                        minItems: 0
-                    },
-                    correctAnswer: {
-                        type: SchemaType.STRING,
-                        description: "The correct answer for the question.",
-                        nullable: false
-                    },
-                    explanation: {
-                        type: SchemaType.STRING,
-                        description: "An explanation for the correct answer."
-                    }
-                },
-                required: ["number", "questionText", "questionType", "correctAnswer"],
-            }
-        }
-    },
-    required: ["content"],
-};
+const mistralModels = [
+  'mistral-large-2411',
+  'open-mistral-nemo',
+  'codestral-2501',
+  'open-mistral-7b',
+  'open-mixtral-8x7b',
+  'open-mixtral-8x22b'
+];
 
-const genModel = 'models/gemini-2.0-flash'
+function deepSanitize(value: any): any {
+  if (typeof value === 'string') {
+    return value.replace(/\u0000/g, '');
+  }
+  if (Array.isArray(value)) {
+    return value.map(deepSanitize);
+  }
+  if (value && typeof value === 'object') {
+    const sanitized: any = {};
+    for (const key in value) {
+      sanitized[key] = deepSanitize(value[key]);
+    }
+    return sanitized;
+  }
+  return value;
+}
 
 export async function POST(request: NextRequest) {
-    const form = await request.formData();
+  const form = await request.formData();
+  const title = form.get('title') as string;
+  const contentFiles = form.getAll('contentFiles') as File[];
 
-    const title = form.get('title') as string;
-    const contentFiles = form.getAll("contentFiles") as File[];
+  try {
+    const { userId, error } = await verifyAuth(request);
+    if (error) return NextResponse.json({ error }, { status: 401 });
 
-    try {
+    if (!title) return NextResponse.json({ error: 'Quiz must have a title' }, { status: 400 });
+    if (!contentFiles || contentFiles.length === 0)
+      return NextResponse.json({ error: 'At least one file must be provided' }, { status: 400 });
 
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
+    const fileContents: string[] = [];
+    for (const file of contentFiles) {
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      try {
+        const parsed = await pdfParse(fileBuffer);
+        fileContents.push(`Fichier: ${file.name}\n\n${parsed.text}`);
+      } catch (err) {
+        console.warn(`Failed to parse PDF ${file.name}:`, err);
+        return NextResponse.json({ error: `Failed to parse PDF file: ${file.name}` }, { status: 400 });
+      }
+    }
 
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
+    const combinedContents = fileContents.join('\n\n---\n\n');
 
-        if (!title) {
-            return NextResponse.json({ error: "Quiz must have a title" }, { status: 400 });
-        }
+    const contextPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers :
 
-        if (!contentFiles || contentFiles.length === 0) {
-            return NextResponse.json({ error: "At least one file must be provided" }, { status: 400 });
-        }
+${combinedFileContent}
 
-        // Upload all files with Gemini API after writing them to a temporary location
-        const fileUploadResults = await Promise.all(
-            contentFiles.map(async (file) => {
-                // Convert the File to a Buffer
-                const fileBuffer = await file.arrayBuffer();
+Votre tâche est de produire un contexte structuré et cohérent à partir de ce contenu.
 
-                // Define a temporary directory and ensure it exists
-                const tmpDir = path.join(process.cwd(), 'tmp');
-                await fs.promises.mkdir(tmpDir, { recursive: true });
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu’ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+- Mélangez intelligemment les contenus issus des différents fichiers.
+- Mettez en avant les éléments particulièrement utiles pour la génération d’évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
-                // Create a temporary file path
-                const tmpFilePath = path.join(tmpDir, file.name);
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
 
-                // Write the file buffer to disk
-                await fs.promises.writeFile(tmpFilePath, Buffer.from(fileBuffer));
+`;
 
-                // Upload the file using the temporary file path
-                const uploadResult = await fileManager.uploadFile(
-                    tmpFilePath, 
-                    {
-                        mimeType: file.type,
-                        displayName: file.name,
-                    }
-                );
-
-                // Rremove the temporary file after upload
-                await fs.promises.unlink(tmpFilePath);
-
-                return uploadResult;
-            })
-        );
-
-        console.log("Starting Phase 1: Generating context...");
-        const contextModel = genAI.getGenerativeModel({ model: genModel });
-
-        const contextPrompt = `
-Analysez le contenu des fichiers fournis et générez un résumé structuré des concepts clés abordés.
-- Mélangez les thèmes des différents fichiers de manière cohérente.
-- Identifiez les notions principales et expliquez-les clairement.
-- Mettez en avant les points importants qui peuvent être utilisés pour créer un quiz.
-- Ne copiez pas directement le contenu des fichiers, mais reformulez et synthétisez.
-- Présentez le résumé sous une forme organisée et lisible.
-        `;
-
-        // Generate context with uploaded files
-        const contextResult = await contextModel.generateContent([
-            contextPrompt,
-            ...fileUploadResults.map(uploadResult => ({ fileData: {
-                fileUri: uploadResult.file.uri,
-                mimeType: uploadResult.file.mimeType,
-            } }))
-        ]);
-        
-        const contextText = contextResult.response.text();
-        console.log("Phase 1 Completed: Context generated.");
-        console.log("Context:", contextText);
-
-        console.log("Starting Phase 2: Generating quiz...");
-        /*const quizResult = await model.generateContent([
-            quizPrompt,
-            ...exercices.map(exercice => ({ fileData: exercice }))
-        ]);*/
-
-        const quizPrompt = `
-Générez un quiz basé sur le résumé suivant :
+    const quizPromptTemplate = (contextText: string) => `
+Générez une évaluation basé sur le contexte suivant :
 
 ${contextText}
 
-- Incluez au moins 10 questions.
-- L'ordre des questions doit être indépendant de l'ordre des chapitres fournis.
-- Assurez-vous que les questions couvrent les concepts du résumé.
-- Variez le type de questions : QCM, questions ouvertes, compréhension de code, écriture de code.
-- La quantité des différents types de questions doit être équilibrée.
-- Les exercices doivent être difficiles est doivent nécessiter beaucoup de reflexion.`;
+Consignes :
 
-        const quizModel = genAI.getGenerativeModel({
-            model: genModel,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: quizSchema
+- Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
+- L'ordre des questions doit être indépendant de celui des chapitres ou sections du contexte.
+- Variez intelligemment les types de questions : QCM (choix multiples), questions ouvertes, compréhension de code, écriture de code.
+- Le type de question doit être choisi en fonction du contenu testé :
+  - Si la notion est pratique ou liée à la programmation, privilégiez la compréhension de code ou l’écriture de code.
+  - Si la notion est théorique ou conceptuelle, privilégiez des QCM ou questions ouvertes.
+  - Si un concept présente plusieurs facettes (théorique + pratique), vous pouvez mélanger les types ou choisir celui qui permet la meilleure évaluation de la compréhension.
+- Les questions doivent être difficiles et demander une réflexion approfondie, pas simplement de la restitution de faits.
+- Les questions d'écriture de code doivent fournir des exmples de résultats ou de comportements attendus.
+- Évitez les questions trivia ou trop simples.
+- Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.
+- Le format JSON doit être conforme à l'exemple suivant :
+
+Exemple :
+{
+  "content": [
+    {
+      "number": "Q1",
+      "questionText": "Qu'est-ce que la récursion ?",
+      "questionType": "open",
+      "options": [],
+      "correctAnswer": "La récursion est une méthode où une fonction s'appelle elle-même.",
+      "explanation": "La récursion permet de résoudre un problème en le divisant en sous-problèmes similaires."
+    },
+    {
+      "number": "Q2",
+      "questionText": "Quelle est la sortie du code suivant ?\\n\\nfunction f(n) {\\n  if (n <= 1) return 1;\\n  return n * f(n - 1);\\n}\\nf(3);",
+      "questionType": "codeComprehension",
+      "options": [],
+      "correctAnswer": "6",
+      "explanation": "La fonction calcule la factorielle : f(3) = 3 * 2 * 1 = 6."
+    },
+    {
+      "number": "Q3",
+      "questionText": "Choisissez les bonnes réponses concernant la récursion.",
+      "questionType": "mcq",
+      "options": [
+        "Elle nécessite toujours une condition d'arrêt.",
+        "Elle est plus rapide que l'itération dans tous les cas.",
+        "Elle peut mener à un dépassement de pile si mal utilisée.",
+        "Elle ne peut pas être utilisée pour parcourir des structures arborescentes."
+      ],
+      "correctAnswer": "Elle nécessite toujours une condition d'arrêt.; Elle peut mener à un dépassement de pile si mal utilisée.",
+      "explanation": "Sans condition d'arrêt, la récursion boucle à l'infini et cause un dépassement de pile."
+    }
+  ]
+}
+`;
+
+    const results: any[] = [];
+
+    const contextPrompt = contextPromptTemplate(combinedContents);
+    for (const model of mistralModels) {
+      try {
+        // Générer le contexte avec ce modèle
+        const contextResponse = await mistral.chat.complete({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.`
+            },
+            {
+              role: 'user',
+              content: contextPrompt
             }
+          ],
         });
 
-        const quizResult = await quizModel.generateContent([
-            quizPrompt
-        ]);
-        
-        const quizText = quizResult.response.text();
-        console.log("Phase 2 Completed: Quiz generated.");
+        const contextText = contextResponse.choices[0]?.message?.content ?? '';
+        const quizPrompt = quizPromptTemplate(contextText as string);
 
-        // Ensure quizText is valid JSON before saving
-        let quizJSON;
-        try {
-            quizJSON = JSON.parse(quizText);
-        } catch (error) {
-            console.error("Invalid JSON format:", error);
-            return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
-        }
+        // Générer le quiz à partir de ce contexte
+        const quizResponse = await mistral.chat.complete({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. Vous retournez toujours un objet JSON valide et structuré.`
+            },
+            {
+              role: 'user',
+              content: quizPrompt
+            }
+          ],
+          responseFormat: { type: 'json_object' },
+        });
+
+        const quizText = quizResponse.choices[0]?.message?.content ?? '';
+        const parsedQuiz = JSON.parse(quizText as string);
+        const sanitizedQuiz = deepSanitize(parsedQuiz);
 
         await prisma.quiz.create({
-            data: {
-                title: title,
-                content: quizJSON,
-                prompts: JSON.parse(JSON.stringify({
-                    contextPrompt: contextPrompt,
-                    quizPrompt: quizPrompt
-                })),
-                genModel: genModel,
-                author: {connect: {id: userId as number}},
+          data: {
+            title: `${title} (${model})`,
+            content: sanitizedQuiz,
+            prompts: {
+              contextPrompt: contextPromptTemplate('file values'),
+              quizPrompt: quizPromptTemplate('context text')
             },
+            genModel: model,
+            author: { connect: { id: userId as number } },
+          },
         });
 
-        return NextResponse.json({ context: contextText, quiz: quizText });
-    } catch (error) {
-        console.log(error);
-        return NextResponse.json({ error: "Failed to login" }, { status: 500 });
+        console.log(`Eval created successfully for model ${model}`);
+        console.log('context:', contextText);
+        results.push({ model, status: 'ok' });
+      } catch (err) {
+        console.error(`Error for model ${model}:`, err);
+        results.push({ model, status: 'error', message: (err as Error).message });
+      }
     }
+
+    return NextResponse.json({ results });
+
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

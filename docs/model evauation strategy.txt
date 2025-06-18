@@ -1,0 +1,46 @@
+Option 1: Start with maximized prompts, then choose a model
+Pros:
+
+You see what each model is truly capable of under optimal conditions.
+
+You can make a decision based on best-case outputs.
+
+Useful when you care about final quality above all, especially for user-facing generative content (e.g., stories, product descriptions, summarizations).
+
+Cons:
+
+Prompt engineering takes time, and results can vary between models (what works well for GPT-4 may underperform on Claude or Gemini).
+
+You may optimize a prompt for a model that turns out too costly or slow for your production constraints.
+
+Option 2: Start with simple prompts, pick a model, then optimize prompts
+Pros:
+
+Faster evaluation loop — less time spent engineering prompts at the start.
+
+Good for early-stage development, especially when you're still figuring out cost, latency, and API ergonomics.
+
+You only invest in prompt engineering for the model you're going to use.
+
+Cons:
+
+May underestimate a model's potential (especially if it's sensitive to prompt structure).
+
+Might lead you to discard a powerful model too early just because the base prompt wasn’t a good fit.
+
+✅ Best Practice (Hybrid Approach)
+Start with a reasonably informative “mid-level” prompt — not too basic, but not deeply optimized.
+
+Run a small benchmark across a few models using the same prompt.
+
+Choose 2-3 top contenders based on quality, speed, and cost.
+
+Then, do targeted prompt engineering for those few models to fully unlock their potential.
+
+Run a final evaluation.
+
+Summary:
+Stage	If you're optimizing for...
+Start with simple prompt	Speed, cost, quick prototyping
+Start with max prompt	Output quality, final production use
+Hybrid	Balanced and scalable development

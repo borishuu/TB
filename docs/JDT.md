@@ -139,3 +139,24 @@
 
 ### Problèmes Rencontrés
 
+
+
+## Séance - 16.04.2025
+
+### Tâches Réalisées
+1. **Tâche 1** : Recherche plus approfondie et reécriture des critères de qualité d'une évaluation
+    - **Description** :  
+    - **Durée** : toute la séance
+    - **Résultat** :  
+
+### Problèmes Rencontrés
+
+## Séance - 16.04.2025
+
+### Tâches Réalisées
+1. **Tâche 1** : Test des modèles LLMaaS ayant la possibilité d'être déployés localement pour analyser leurs résultats.
+    - **Description** :  
+    - **Durée** : toute la séance
+    - **Résultat** :  
+
+### Problèmes Rencontrés
