@@ -1,9 +1,7 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { GoogleGenAI } from "@google/genai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-//import fs from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 import pdfParse from 'pdf-parse';
