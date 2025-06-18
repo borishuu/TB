@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 interface File {
   id: number;
   fileName: string;
-  course: string;
-  createdAt: string; 
+  course: object;
+  createdAt: string;
 }
 
 export default function File({ file, onDelete }: { file: File; onDelete?: (id: number) => void }) {

@@ -1,18 +1,21 @@
 import {NextRequest, NextResponse} from 'next/server';
-import { GoogleGenerativeAI, ObjectSchema, Schema, SchemaType } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-import fs from 'fs';
+//import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
+import pdfParse from 'pdf-parse';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
 export async function POST(request: NextRequest) {
+    console.log("POST /api/file");
     const form = await request.formData();
 
-    const title = form.get('title') as string;
-    const contentFiles = form.getAll("contentFiles") as File[];
+    const course = form.get('course') as string;
+    const contentFiles = form.getAll('files') as File[];
 
     try {
 
@@ -23,29 +26,48 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error }, { status: 401 });
         }
 
-        if (!title) {
-            return NextResponse.json({ error: "Quiz must have a title" }, { status: 400 });
-        }
-
         if (!contentFiles || contentFiles.length === 0) {
-            return NextResponse.json({ error: "At least one file must be provided" }, { status: 400 });
+            return NextResponse.json({ error: "Files must be provided" }, { status: 400 });
         }
-  
 
-        await prisma.quiz.create({
-            data: {
-                title: title,
-                content: quizJSON,
-                prompts: JSON.parse(JSON.stringify({
-                    contextPrompt: contextPrompt,
-                    quizPrompt: quizPrompt
-                })),
-                genModel: genModel,
-                author: {connect: {id: userId as number}},
-            },
-        });
+        for (const file of contentFiles) {
+          const fileBuffer = Buffer.from(await file.arrayBuffer());
+          try {
+            const parsed = await pdfParse(fileBuffer);
+            const response = await genAI.models.embedContent({
+                contents: parsed.text,
+                model: 'gemini-embedding-exp-03-07',
+            });
+      
+            console.log((response.embeddings as any))
 
-        return NextResponse.json({ context: contextText, quiz: quizText });
+            // Save file to disk
+            const uploadDir = path.join(process.cwd(), 'uploads');
+            await fs.mkdir(uploadDir, { recursive: true });
+            const filePath = path.join(uploadDir, file.name);
+            await fs.writeFile(filePath, fileBuffer);
+
+            const embeddingArray = (response.embeddings as any)[0].values;
+            const embeddingString = `[${embeddingArray.join(',')}]`;
+
+            await prisma.$executeRawUnsafe(`
+            INSERT INTO "File" (
+                "fileName", "mimeType", "fileSize", "filePath", "embedding", "courseId"
+            ) VALUES (
+                '${file.name}', '${file.type}', ${fileBuffer.length}, '${filePath}', '${embeddingString}', 1
+            )
+            `);
+
+
+          } catch (err) {
+            console.warn(`Failed to parse PDF ${file.name}:`, err);
+            return NextResponse.json({ error: `Failed to parse PDF file: ${file.name}` }, { status: 400 });
+          }
+        }
+
+        /**/
+
+        return NextResponse.json({ message: "success" });
     } catch (error) {
         console.log(error);
         return NextResponse.json({ error: "Failed to login" }, { status: 500 });
