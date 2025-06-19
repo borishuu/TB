@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
             INSERT INTO "File" (
                 "fileName", "mimeType", "fileSize", "filePath", "embedding", "courseId"
             ) VALUES (
-                '${file.name}', '${file.type}', ${fileBuffer.length}, '${filePath}', '${embeddingString}', 1
+                '${file.name}', '${file.type}', ${fileBuffer.length}, '${filePath}', '${embeddingString}', 2
             )
             `);
 

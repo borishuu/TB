@@ -29,11 +29,10 @@ export async function POST(request: NextRequest) {
           
         const topicEmbedding = (embeddingResponse.embeddings as any)[0].values;
 
-        // Convert the JS array to a SQL-compatible string
+        // Convert the JS array to a SQL compatible string
         const embeddingSql = `ARRAY[${topicEmbedding.join(',')}]::vector`;
 
 
-        // Search the most similar files (example using cosine similarity)
         const results = await prisma.$queryRawUnsafe(`
             SELECT
                 "id",
@@ -43,15 +42,11 @@ export async function POST(request: NextRequest) {
                 "filePath",
                 "courseId",
                 "createdAt",
-                ("embedding" <#> ${embeddingSql}) AS distance
+                ("embedding" <=> ${embeddingSql}) AS similarity
             FROM "File"
-            WHERE ABS(("embedding" <#> ${embeddingSql})) >= 0.55
-            ORDER BY distance ASC
+            ORDER BY similarity ASC
             LIMIT 5;
-        `);
-        
-        
-        
+        `);        
 
         console.log("Similarity search results:", results);
 
