@@ -62,20 +62,20 @@ export async function POST(request: NextRequest) {
     const combinedContents = fileContents.join('\n\n---\n\n');
 
     const contextPromptTemplate = (combinedFileContent: string) =>`
-Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers :
+Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers :
 
 ${combinedFileContent}
 
 Votre tâche est de produire un contexte structuré et cohérent à partir de ce contenu.
 
-Instructions :
-- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu’ils soient théoriques ou pratiques.
-- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
 - Mélangez intelligemment les contenus issus des différents fichiers.
-- Mettez en avant les éléments particulièrement utiles pour la génération d’évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
-Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
 
 `;
 
@@ -90,7 +90,7 @@ Consignes :
 - L'ordre des questions doit être indépendant de celui des chapitres ou sections du contexte.
 - Variez intelligemment les types de questions : QCM (choix multiples), questions ouvertes, compréhension de code, écriture de code.
 - Le type de question doit être choisi en fonction du contenu testé :
-  - Si la notion est pratique ou liée à la programmation, privilégiez la compréhension de code ou l’écriture de code.
+  - Si la notion est pratique ou liée à la programmation, privilégiez la compréhension de code ou l'écriture de code.
   - Si la notion est théorique ou conceptuelle, privilégiez des QCM ou questions ouvertes.
   - Si un concept présente plusieurs facettes (théorique + pratique), vous pouvez mélanger les types ou choisir celui qui permet la meilleure évaluation de la compréhension.
 - Les questions doivent être difficiles et demander une réflexion approfondie, pas simplement de la restitution de faits.
