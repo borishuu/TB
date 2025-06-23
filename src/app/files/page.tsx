@@ -7,7 +7,7 @@ import UploadForm from '@/components/UploadForm';
 interface File {
   id: number;
   fileName: string;
-  course: string;
+  course: object;
   createdAt: string;
 }
 
@@ -37,8 +37,8 @@ export default function FilesDashboard() {
   }, []);
 
   const groupedFiles = files.reduce<Record<string, File[]>>((acc, file) => {
-    if (!acc[file.course]) acc[file.course] = [];
-    acc[file.course].push(file);
+    if (!acc[(file.course as any).courseName]) acc[(file.course as any).courseName] = [];
+    acc[(file.course as any).courseName].push(file);
     return acc;
   }, {});
 

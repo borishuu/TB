@@ -14,7 +14,7 @@ export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
   const [dragActive, setDragActive] = useState(false);
 
   const handleFilesUpload = async () => {
-    if (!uploadFiles || !selectedCourse) return;
+    if (!uploadFiles /*|| !selectedCourse*/) return;
 
     const formData = new FormData();
     Array.from(uploadFiles).forEach((file) => {
@@ -23,14 +23,14 @@ export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
     formData.append('course', selectedCourse);
 
     try {
-      const res = await fetch('/api/user/files', {
+      const res = await fetch('/api/file', {
         method: 'POST',
         body: formData,
       });
 
       if (res.ok) {
         const updatedFiles = await res.json();
-        onSuccess(updatedFiles);
+        //onSuccess(updatedFiles);
         onClose();
       } else {
         console.error('Upload failed');

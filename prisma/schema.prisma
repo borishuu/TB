@@ -31,3 +31,21 @@ model Quiz {
   authorId  Int
   author    User   @relation(fields: [authorId], references: [id])
 }
+
+model Course {
+  id          Int     @id @default(autoincrement())
+  courseName  String
+  files       File[]
+}
+
+model File {
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  fileName    String
+  mimeType    String
+  fileSize    Float
+  filePath    String
+  embedding   Unsupported("vector(3072)")
+  courseId    Int
+  course      Course    @relation(fields: [courseId], references: [id])
+}
