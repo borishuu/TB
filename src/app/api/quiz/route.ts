@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
 
     const title = form.get('title') as string;
     const contentFiles = form.getAll("contentFiles") as File[];
+    const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
 
     try {
 
@@ -83,41 +84,53 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Quiz must have a title" }, { status: 400 });
         }
 
-        if (!contentFiles || contentFiles.length === 0) {
+        if ((!contentFiles || contentFiles.length === 0) && suggestedFileIds.length === 0) {
             return NextResponse.json({ error: "At least one file must be provided" }, { status: 400 });
+        }
+
+        let poolFiles: { fileName: string, filePath: string, mimeType: string }[] = [];
+
+        if (suggestedFileIds.length > 0) {
+          const results = await prisma.file.findMany({
+            where: { id: { in: suggestedFileIds } },
+            select: {
+              fileName: true,
+              filePath: true,
+              mimeType: true,
+            },
+          });
+
+          poolFiles = results;
         }
 
         // Upload all files with Gemini API after writing them to a temporary location
         const fileUploadResults = await Promise.all(
-            contentFiles.map(async (file) => {
-                // Convert the File to a Buffer
-                const fileBuffer = await file.arrayBuffer();
-
-                // Define a temporary directory and ensure it exists
-                const tmpDir = path.join(process.cwd(), 'tmp');
-                await fs.promises.mkdir(tmpDir, { recursive: true });
-
-                // Create a temporary file path
-                const tmpFilePath = path.join(tmpDir, file.name);
-
-                // Write the file buffer to disk
-                await fs.promises.writeFile(tmpFilePath, Buffer.from(fileBuffer));
-
-                // Upload the file using the temporary file path
-                const uploadResult = await fileManager.uploadFile(
-                    tmpFilePath, 
-                    {
-                        mimeType: file.type,
-                        displayName: file.name,
-                    }
-                );
-
-                // Rremove the temporary file after upload
-                await fs.promises.unlink(tmpFilePath);
-
-                return uploadResult;
-            })
-        );
+          [...contentFiles, ...poolFiles].map(async (file) => {
+            if (file instanceof File) {
+              // Handle local uploaded files
+              const fileBuffer = await file.arrayBuffer();
+              const tmpDir = path.join(process.cwd(), 'tmp');
+              await fs.promises.mkdir(tmpDir, { recursive: true });
+              const tmpFilePath = path.join(tmpDir, file.name);
+              await fs.promises.writeFile(tmpFilePath, Buffer.from(fileBuffer));
+        
+              const uploadResult = await fileManager.uploadFile(tmpFilePath, {
+                mimeType: file.type,
+                displayName: file.name,
+              });
+        
+              await fs.promises.unlink(tmpFilePath);
+              return uploadResult;
+            } else {
+              // Handle pool files (already stored on disk)
+              const uploadResult = await fileManager.uploadFile(file.filePath, {
+                mimeType: file.mimeType,
+                displayName: file.fileName,
+              });
+              return uploadResult;
+            }
+          })
+        );        
 
         console.log("Starting Phase 1: Generating context...");
         const contextModel = genAI.getGenerativeModel({ model: genModel });
@@ -145,10 +158,6 @@ Analysez le contenu des fichiers fournis et générez un résumé structuré des
         console.log("Context:", contextText);
 
         console.log("Starting Phase 2: Generating quiz...");
-        /*const quizResult = await model.generateContent([
-            quizPrompt,
-            ...exercices.map(exercice => ({ fileData: exercice }))
-        ]);*/
 
         const quizPrompt = `
 Générez un quiz basé sur le résumé suivant :
