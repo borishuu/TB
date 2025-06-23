@@ -6,7 +6,99 @@ import path from 'path';
 import pdfParse from 'pdf-parse';
 
 const OLLAMA_ENDPOINT = 'http://localhost:11434/api/generate';
-const OLLAMA_MODEL = 'llama2:latest';
+const OLLAMA_MODEL = 'codestral:latest';
+
+
+const contextPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers :
+
+${combinedFileContent}
+
+Votre tâche est de produire un contexte structuré et cohérent à partir de ce contenu.
+
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+- Mélangez intelligemment les contenus issus des différents fichiers.
+- Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
+
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+
+`;
+
+const quizPromptTemplate = (contextText: string) => `
+Générez une évaluation basé sur le contexte suivant :
+
+${contextText}
+
+Consignes :
+
+- Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
+- L'ordre des questions doit être indépendant de celui des chapitres ou sections du contexte.
+- Variez intelligemment les types de questions : QCM (choix multiples), questions ouvertes, compréhension de code, écriture de code.
+- Le type de question doit être choisi en fonction du contenu testé :
+  - Si la notion est pratique ou liée à la programmation, privilégiez la compréhension de code ou l'écriture de code.
+  - Si la notion est théorique ou conceptuelle, privilégiez des QCM ou questions ouvertes.
+  - Si un concept présente plusieurs facettes (théorique + pratique), vous pouvez mélanger les types ou choisir celui qui permet la meilleure évaluation de la compréhension.
+- Les questions doivent être difficiles et demander une réflexion approfondie, pas simplement de la restitution de faits.
+- Les questions d'écriture de code doivent fournir des exmples de résultats ou de comportements attendus.
+- Évitez les questions trivia ou trop simples.
+- Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.
+- Le format JSON doit être conforme à l'exemple suivant :
+
+Exemple :
+{
+  "content": [
+    {
+      "number": "Q1",
+      "questionText": "Qu'est-ce que la récursion ?",
+      "questionType": "open",
+      "options": [],
+      "correctAnswer": "La récursion est une méthode où une fonction s'appelle elle-même.",
+      "explanation": "La récursion permet de résoudre un problème en le divisant en sous-problèmes similaires."
+    },
+    {
+      "number": "Q2",
+      "questionText": "Quelle est la sortie du code suivant ?\\n\\nfunction f(n) {\\n  if (n <= 1) return 1;\\n  return n * f(n - 1);\\n}\\nf(3);",
+      "questionType": "codeComprehension",
+      "options": [],
+      "correctAnswer": "6",
+      "explanation": "La fonction calcule la factorielle : f(3) = 3 * 2 * 1 = 6."
+    },
+    {
+      "number": "Q3",
+      "questionText": "Choisissez les bonnes réponses concernant la récursion.",
+      "questionType": "mcq",
+      "options": [
+        "Elle nécessite toujours une condition d'arrêt.",
+        "Elle est plus rapide que l'itération dans tous les cas.",
+        "Elle peut mener à un dépassement de pile si mal utilisée.",
+        "Elle ne peut pas être utilisée pour parcourir des structures arborescentes."
+      ],
+      "correctAnswer": "Elle nécessite toujours une condition d'arrêt.; Elle peut mener à un dépassement de pile si mal utilisée.",
+      "explanation": "Sans condition d'arrêt, la récursion boucle à l'infini et cause un dépassement de pile."
+    }
+  ]
+}
+`;
+
+function deepSanitize(value: any): any {
+    if (typeof value === 'string') {
+      return value.replace(/\u0000/g, '');
+    }
+    if (Array.isArray(value)) {
+      return value.map(deepSanitize);
+    }
+    if (value && typeof value === 'object') {
+      const sanitized: any = {};
+      for (const key in value) {
+        sanitized[key] = deepSanitize(value[key]);
+      }
+      return sanitized;
+    }
+    return value;
+}
 
 async function queryOllama(prompt: string): Promise<string> {
   const res = await fetch(OLLAMA_ENDPOINT, {
@@ -82,44 +174,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Starting Phase 1: Generating context...");
-    const contextPrompt = `
-Analysez le contenu suivant et générez un résumé structuré des concepts clés abordés :
-${combinedText}
 
-Consignes :
-- Reformulez et synthétisez.
-- Structurez par thème.
-- Présentez sous forme de résumé clair pour la génération de quiz.
-    `;
+    const contextPrompt = contextPromptTemplate(combinedText);
     const contextText = await queryOllama(contextPrompt);
     console.log("Context Generated:\n", contextText);
 
     console.log("Starting Phase 2: Generating quiz...");
-    const quizPrompt = `
-En vous basant sur le résumé suivant, générez un quiz structuré au format JSON.
 
-Résumé :
-${contextText}
-
-Consignes :
-- 10 questions minimum
-- Types variés : "mcq", "open", "codeComprehension", "codeWriting"
-- Format JSON strict :
-{
-  "content": [
-    {
-      "number": "1",
-      "questionText": "...",
-      "questionType": "mcq",
-      "options": ["A", "B", "C"],
-      "correctAnswer": "A",
-      "explanation": "..."
-    },
-    ...
-  ]
-}
-    `;
+    const quizPrompt = quizPromptTemplate(contextText);
     const quizText = await queryOllama(quizPrompt);
+    const parsedQuiz = JSON.parse(quizText);
+    const sanitizedQuiz = deepSanitize(parsedQuiz);
 
     let quizJSON;
     try {
@@ -134,10 +199,10 @@ Consignes :
     await prisma.quiz.create({
       data: {
         title,
-        content: quizJSON,
+        content: sanitizedQuiz,
         prompts: {
-          contextPrompt,
-          quizPrompt,
+          contextPrompt: contextPromptTemplate('context text'),
+          quizPrompt: quizPromptTemplate('file values'),
         },
         genModel: OLLAMA_MODEL,
         author: { connect: { id: userId as number } },
