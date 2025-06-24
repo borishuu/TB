@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import fs from 'fs';
-import path from 'path';
+import path, { format } from 'path';
 import pdfParse from 'pdf-parse';
+import Stream from 'stream';
 
-const OLLAMA_ENDPOINT = 'http://localhost:11434/api/generate';
-const OLLAMA_MODEL = 'codestral:latest';
+//const OLLAMA_ENDPOINT = 'http://localhost:11434/api/generate';
+const OLLAMA_ENDPOINT = 'http://localhost:11434/api/chat';
+//const OLLAMA_MODEL = 'codestral:latest';
+const OLLAMA_MODEL = 'devstral:latest';
 
 
-const contextPromptTemplate = (combinedFileContent: string) =>`
-Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers :
+const contextSystemPrompt = `
+Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
+`;
+
+/*const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers distincts. Chaque fichier est précédé d'un en-tête du type "### Fichier N (nom):", indiquant son origine.
 
 ${combinedFileContent}
 
@@ -24,10 +31,30 @@ Instructions :
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+`;*/
 
+const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu suivant :
+
+${combinedFileContent}
+
+Votre tâche est de produire un contexte structuré et cohérent à partir de ce contenu.
+
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d'application, etc.
+- Mélangez intelligemment les contenus issus des différents fichiers.
+- Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
+
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
 `;
 
-const quizPromptTemplate = (contextText: string) => `
+const quizSystemPrompt = `
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. Vous retournez toujours un objet JSON valide et structuré.
+`;
+
+const quizUserPromptTemplate = (contextText: string) => `
 Générez une évaluation basé sur le contexte suivant :
 
 ${contextText}
@@ -100,24 +127,61 @@ function deepSanitize(value: any): any {
     return value;
 }
 
-async function queryOllama(prompt: string): Promise<string> {
-  const res = await fetch(OLLAMA_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: OLLAMA_MODEL,
-      prompt: prompt,
-      stream: false,
-    }),
-  });
+async function queryOllamaGenerate(systemPrompt: string, userPrompt: string, json: boolean): Promise<string> {
+    const body: Record<string, any> = {
+        model: OLLAMA_MODEL,
+        system: systemPrompt,
+        prompt: userPrompt,
+        stream: false,
+    };
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Ollama error: ${errText}`);
-  }
+    if (json) {
+        body.format = 'json';
+    }
 
-  const data = await res.json();
-  return data.response.trim();
+    const res = await fetch(OLLAMA_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Ollama error: ${errText}`);
+    }
+
+    const data = await res.json();
+    return data.response.trim();
+}
+
+
+async function queryOllamaChat(systemPrompt: string, userPrompt: string): Promise<string> {
+
+    const res = await fetch(OLLAMA_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: OLLAMA_MODEL,
+            stream: false,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ]
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Ollama error: ${errText}`);
+    }
+
+    const data = await res.json();
+    try {
+        return data.message.content.trim();
+    } catch (err) {
+        console.error("Ollama returned invalid JSON:\n", data);
+        throw new Error(`Failed to parse JSON from Ollama: ${err}`);
+    }
 }
 
 async function extractTextFromPDF(filePath: string): Promise<string> {
@@ -155,36 +219,56 @@ export async function POST(request: NextRequest) {
     const tmpDir = path.join(process.cwd(), 'tmp');
     await fs.promises.mkdir(tmpDir, { recursive: true });
 
-    let combinedText = '';
+    const perFileContexts: string[] = [];
 
-    for (const file of allFiles) {
-      let filePath: string;
+    //let combinedText = '';
+    console.log("Starting Phase 1: Generating context...");
+    for (let i = 0; i < allFiles.length; i++) {
+        const file = allFiles[i];
+        let filePath: string;
 
-      if (file instanceof File) {
-        const buffer = await file.arrayBuffer();
-        filePath = path.join(tmpDir, file.name);
-        await fs.promises.writeFile(filePath, Buffer.from(buffer));
-      } else {
-        filePath = file.filePath;
-      }
+        if (file instanceof File) {
+            const buffer = await file.arrayBuffer();
+            filePath = path.join(tmpDir, file.name);
+            await fs.promises.writeFile(filePath, Buffer.from(buffer));
+            console.log(`File written to temporary location: ${filePath}`);
+        } else {
+            filePath = file.filePath;
+        }
 
-      const text = await extractTextFromPDF(filePath);
-      combinedText += `\n\n-----\n${text}`;
-      if (file instanceof File) await fs.promises.unlink(filePath); // clean up tmp
+        const text = await extractTextFromPDF(filePath);
+        if (file instanceof File) await fs.promises.unlink(filePath); 
+
+        const singleFilePrompt = contextUserPromptTemplate(text);
+
+        //const singleFileContext = await queryOllamaGenerate(contextSystemPrompt, singleFilePrompt, false);
+        const singleFileContext = await queryOllamaChat(contextSystemPrompt, singleFilePrompt);
+
+        console.log(singleFileContext);
+        perFileContexts.push(singleFileContext);
+        //combinedText += `\n\n### Fichier ${i + 1} (${filePath}):\n\n${text}`;
+        
+        //const debugOutputPath = path.join(tmpDir, 'combined_text_debug.txt');
+        //await fs.promises.writeFile(debugOutputPath, combinedText, 'utf-8');
+        //console.log(`Combined text written to: ${debugOutputPath}`);
     }
 
-    console.log("Starting Phase 1: Generating context...");
+    const combinedContext = perFileContexts.join('\n\n');
 
-    const contextPrompt = contextPromptTemplate(combinedText);
-    const contextText = await queryOllama(contextPrompt);
-    console.log("Context Generated:\n", contextText);
+    //const contextPrompt = contextUserPromptTemplate(combinedText);
+    //const contextText = await queryOllamaGenerate(contextSystemPrompt, contextPrompt, false);
+    //const contextText = await queryOllamaChat(contextSystemPrompt, contextPrompt);
+
+    //console.log("Context Generated:\n", contextText);
+    console.log("Context Generated:\n", combinedContext);
 
     console.log("Starting Phase 2: Generating quiz...");
 
-    const quizPrompt = quizPromptTemplate(contextText);
-    const quizText = await queryOllama(quizPrompt);
-    const parsedQuiz = JSON.parse(quizText);
-    const sanitizedQuiz = deepSanitize(parsedQuiz);
+    //const quizPrompt = quizUserPromptTemplate(contextText);
+    const quizPrompt = quizUserPromptTemplate(combinedContext);
+    //const quizText = await queryOllamaGenerate(quizSystemPrompt, quizPrompt, true);
+    const quizText = await queryOllamaChat(quizSystemPrompt, quizPrompt);
+    //const parsedQuiz = JSON.parse(quizText);
 
     let quizJSON;
     try {
@@ -194,22 +278,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
     }
 
-    console.log(quizJSON);
+    const sanitizedQuiz = deepSanitize(quizJSON);
+    console.log(sanitizedQuiz);
 
     await prisma.quiz.create({
       data: {
         title,
         content: sanitizedQuiz,
         prompts: {
-          contextPrompt: contextPromptTemplate('context text'),
-          quizPrompt: quizPromptTemplate('file values'),
+          contextPrompt: contextUserPromptTemplate('context text'),
+          quizPrompt: quizUserPromptTemplate('file values'),
         },
         genModel: OLLAMA_MODEL,
         author: { connect: { id: userId as number } },
       },
     });
 
-    return NextResponse.json({ context: contextText, quiz: quizText });
+    return NextResponse.json({ context: combinedContext /*contextText*/, quiz: quizText });
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
