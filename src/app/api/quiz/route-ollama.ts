@@ -1,0 +1,320 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { verifyAuth } from '@/lib/verifyAuth';
+import fs from 'fs';
+import path, { format } from 'path';
+import pdfParse from 'pdf-parse';
+import { performance } from 'perf_hooks';
+
+
+//const OLLAMA_ENDPOINT = 'http://localhost:11434/api/generate';
+const OLLAMA_ENDPOINT = 'http://localhost:11434/api/chat';
+//const OLLAMA_MODEL = 'codestral:latest';
+const OLLAMA_MODEL = 'codestral:latest';
+
+
+const contextSystemPrompt = `
+Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
+`;
+
+const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers distincts. Chaque fichier est précédé d'un en-tête du type "### Fichier N (nom):", indiquant son origine.
+
+${combinedFileContent}
+
+Votre tâche est de produire un contexte structuré et cohérent à partir de ce contenu.
+
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+- Mélangez intelligemment les contenus issus des différents fichiers.
+- Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
+
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+`;
+
+/*const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu suivant :
+
+${combinedFileContent}
+
+Votre tâche est de produire un contexte structuré et cohérent à partir de ce contenu.
+
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d'application, etc.
+- Mélangez intelligemment les contenus issus des différents fichiers.
+- Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
+
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+`;*/
+
+const quizSystemPrompt = `
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. Vous retournez toujours un objet JSON valide et structuré.
+`;
+
+const quizUserPromptTemplate = (contextText: string) => `
+Générez une évaluation basé sur le contexte suivant :
+
+${contextText}
+
+Consignes :
+
+- Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
+- L'ordre des questions doit être indépendant de celui des chapitres ou sections du contexte.
+- Variez intelligemment les types de questions : QCM (choix multiples), questions ouvertes, compréhension de code, écriture de code.
+- Le type de question doit être choisi en fonction du contenu testé :
+  - Si la notion est pratique ou liée à la programmation, privilégiez la compréhension de code ou l'écriture de code.
+  - Si la notion est théorique ou conceptuelle, privilégiez des QCM ou questions ouvertes.
+  - Si un concept présente plusieurs facettes (théorique + pratique), vous pouvez mélanger les types ou choisir celui qui permet la meilleure évaluation de la compréhension.
+- Les questions doivent être difficiles et demander une réflexion approfondie, pas simplement de la restitution de faits.
+- Les questions d'écriture de code doivent fournir des exmples de résultats ou de comportements attendus.
+- Évitez les questions trivia ou trop simples.
+- Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.
+- Le format JSON doit être conforme à l'exemple suivant :
+
+Exemple :
+{
+  "content": [
+    {
+      "number": "Q1",
+      "questionText": "Qu'est-ce que la récursion ?",
+      "questionType": "open",
+      "options": [],
+      "correctAnswer": "La récursion est une méthode où une fonction s'appelle elle-même.",
+      "explanation": "La récursion permet de résoudre un problème en le divisant en sous-problèmes similaires."
+    },
+    {
+      "number": "Q2",
+      "questionText": "Quelle est la sortie du code suivant ?\\n\\nfunction f(n) {\\n  if (n <= 1) return 1;\\n  return n * f(n - 1);\\n}\\nf(3);",
+      "questionType": "codeComprehension",
+      "options": [],
+      "correctAnswer": "6",
+      "explanation": "La fonction calcule la factorielle : f(3) = 3 * 2 * 1 = 6."
+    },
+    {
+      "number": "Q3",
+      "questionText": "Choisissez les bonnes réponses concernant la récursion.",
+      "questionType": "mcq",
+      "options": [
+        "Elle nécessite toujours une condition d'arrêt.",
+        "Elle est plus rapide que l'itération dans tous les cas.",
+        "Elle peut mener à un dépassement de pile si mal utilisée.",
+        "Elle ne peut pas être utilisée pour parcourir des structures arborescentes."
+      ],
+      "correctAnswer": "Elle nécessite toujours une condition d'arrêt.; Elle peut mener à un dépassement de pile si mal utilisée.",
+      "explanation": "Sans condition d'arrêt, la récursion boucle à l'infini et cause un dépassement de pile."
+    }
+  ]
+}
+`;
+
+function deepSanitize(value: any): any {
+    if (typeof value === 'string') {
+      return value.replace(/\u0000/g, '');
+    }
+    if (Array.isArray(value)) {
+      return value.map(deepSanitize);
+    }
+    if (value && typeof value === 'object') {
+      const sanitized: any = {};
+      for (const key in value) {
+        sanitized[key] = deepSanitize(value[key]);
+      }
+      return sanitized;
+    }
+    return value;
+}
+
+async function queryOllamaGenerate(systemPrompt: string, userPrompt: string, json: boolean): Promise<string> {
+    const body: Record<string, any> = {
+        model: OLLAMA_MODEL,
+        system: systemPrompt,
+        prompt: userPrompt,
+        stream: false,
+    };
+
+    if (json) {
+        body.format = 'json';
+    }
+
+    const res = await fetch(OLLAMA_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Ollama error: ${errText}`);
+    }
+
+    const data = await res.json();
+    return data.response.trim();
+}
+
+
+async function queryOllamaChat(systemPrompt: string, userPrompt: string): Promise<string> {
+
+    const res = await fetch(OLLAMA_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: OLLAMA_MODEL,
+            stream: false,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ]
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Ollama error: ${errText}`);
+    }
+
+    const data = await res.json();
+    try {
+        return data.message.content.trim();
+    } catch (err) {
+        console.error("Ollama returned invalid JSON:\n", data);
+        throw new Error(`Failed to parse JSON from Ollama: ${err}`);
+    }
+}
+
+async function extractTextFromPDF(filePath: string): Promise<string> {
+  const dataBuffer = await fs.promises.readFile(filePath);
+  const pdfData = await pdfParse(dataBuffer);
+  return pdfData.text;
+}
+
+export async function POST(request: NextRequest) {
+  const form = await request.formData();
+
+  const title = form.get('title') as string;
+  const contentFiles = form.getAll("contentFiles") as File[];
+  const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
+
+  const modelTiming: any = {
+    model: OLLAMA_MODEL,
+    status: 'ok',
+    contextTimeMs: null,
+    quizTimeMs: null,
+  };
+
+  try {
+    const { userId, error } = await verifyAuth(request);
+    if (error) return NextResponse.json({ error }, { status: 401 });
+    if (!title) return NextResponse.json({ error: "Quiz must have a title" }, { status: 400 });
+    if ((!contentFiles || contentFiles.length === 0) && suggestedFileIds.length === 0) {
+      return NextResponse.json({ error: "At least one file must be provided" }, { status: 400 });
+    }
+
+    let poolFiles: { fileName: string, filePath: string }[] = [];
+
+    if (suggestedFileIds.length > 0) {
+      const results = await prisma.file.findMany({
+        where: { id: { in: suggestedFileIds } },
+        select: { fileName: true, filePath: true },
+      });
+      poolFiles = results;
+    }
+
+    const allFiles = [...contentFiles, ...poolFiles];
+    const tmpDir = path.join(process.cwd(), 'tmp');
+    await fs.promises.mkdir(tmpDir, { recursive: true });
+
+    //const perFileContexts: string[] = [];
+
+    let combinedText = '';
+    console.log("Starting Phase 1: Generating context...");
+    const startContext = performance.now();
+    for (let i = 0; i < allFiles.length; i++) {
+        const file = allFiles[i];
+        let filePath: string;
+
+        if (file instanceof File) {
+            const buffer = await file.arrayBuffer();
+            filePath = path.join(tmpDir, file.name);
+            await fs.promises.writeFile(filePath, Buffer.from(buffer));
+            console.log(`File written to temporary location: ${filePath}`);
+        } else {
+            filePath = file.filePath;
+        }
+
+        const text = await extractTextFromPDF(filePath);
+        if (file instanceof File) await fs.promises.unlink(filePath); 
+
+        //const singleFilePrompt = contextUserPromptTemplate(text);
+
+        //const singleFileContext = await queryOllamaGenerate(contextSystemPrompt, singleFilePrompt, false);
+        //const singleFileContext = await queryOllamaChat(contextSystemPrompt, singleFilePrompt);
+
+        //console.log(singleFileContext);
+        //perFileContexts.push(singleFileContext);
+        combinedText += `\n\n### Fichier ${i + 1} (${filePath}):\n\n${text}`;
+        
+        //const debugOutputPath = path.join(tmpDir, 'combined_text_debug.txt');
+        //await fs.promises.writeFile(debugOutputPath, combinedText, 'utf-8');
+        //console.log(`Combined text written to: ${debugOutputPath}`);
+    }
+
+    //const combinedContext = perFileContexts.join('\n\n');
+
+    const contextPrompt = contextUserPromptTemplate(combinedText);
+    //const contextText = await queryOllamaGenerate(contextSystemPrompt, contextPrompt, false);
+    const contextText = await queryOllamaChat(contextSystemPrompt, contextPrompt);
+    const endContext = performance.now();
+    modelTiming.contextTimeMs = Math.round(endContext - startContext);
+
+    console.log("Context Generated:\n", contextText);
+    //console.log("Context Generated:\n", combinedContext);
+
+    console.log("Starting Phase 2: Generating quiz...");
+
+    const quizPrompt = quizUserPromptTemplate(contextText);
+    //const quizPrompt = quizUserPromptTemplate(combinedContext);
+    //const quizText = await queryOllamaGenerate(quizSystemPrompt, quizPrompt, true);
+    const startQuiz = performance.now();
+    const quizText = await queryOllamaChat(quizSystemPrompt, quizPrompt);
+    const endQuiz = performance.now();
+    modelTiming.quizTimeMs = Math.round(endQuiz - startQuiz);
+    //const parsedQuiz = JSON.parse(quizText);
+
+    let quizJSON;
+    try {
+      quizJSON = JSON.parse(quizText);
+    } catch (err) {
+      console.error("Quiz generation failed: Invalid JSON", quizText);
+      return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
+    }
+
+    const sanitizedQuiz = deepSanitize(quizJSON);
+    console.log(sanitizedQuiz);
+
+    await prisma.quiz.create({
+      data: {
+        title,
+        content: sanitizedQuiz,
+        prompts: {
+          contextPrompt: contextUserPromptTemplate('context text'),
+          quizPrompt: quizUserPromptTemplate('file values'),
+        },
+        genModel: OLLAMA_MODEL,
+        author: { connect: { id: userId as number } },
+      },
+    });
+
+    console.log(`Eval created successfully for model ${OLLAMA_MODEL}`);
+    console.log(`Context took ${modelTiming.contextTimeMs}ms`);
+    console.log(`Quiz took ${modelTiming.quizTimeMs}ms`);
+
+    return NextResponse.json({ context: /*combinedContext*/ contextText, quiz: quizText });
+  } catch (error) {
+    console.error("Error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
