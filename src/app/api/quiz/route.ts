@@ -9,14 +9,14 @@ import Stream from 'stream';
 //const OLLAMA_ENDPOINT = 'http://localhost:11434/api/generate';
 const OLLAMA_ENDPOINT = 'http://localhost:11434/api/chat';
 //const OLLAMA_MODEL = 'codestral:latest';
-const OLLAMA_MODEL = 'devstral:latest';
+const OLLAMA_MODEL = 'codestral:latest';
 
 
 const contextSystemPrompt = `
 Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
 `;
 
-/*const contextUserPromptTemplate = (combinedFileContent: string) =>`
+const contextUserPromptTemplate = (combinedFileContent: string) =>`
 Analysez attentivement le contenu suivant, qui provient de plusieurs fichiers distincts. Chaque fichier est précédé d'un en-tête du type "### Fichier N (nom):", indiquant son origine.
 
 ${combinedFileContent}
@@ -31,9 +31,9 @@ Instructions :
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
-`;*/
+`;
 
-const contextUserPromptTemplate = (combinedFileContent: string) =>`
+/*const contextUserPromptTemplate = (combinedFileContent: string) =>`
 Analysez attentivement le contenu suivant :
 
 ${combinedFileContent}
@@ -48,7 +48,7 @@ Instructions :
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
-`;
+`;*/
 
 const quizSystemPrompt = `
 Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. Vous retournez toujours un objet JSON valide et structuré.
