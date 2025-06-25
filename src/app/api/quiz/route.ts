@@ -4,7 +4,8 @@ import { verifyAuth } from '@/lib/verifyAuth';
 import fs from 'fs';
 import path, { format } from 'path';
 import pdfParse from 'pdf-parse';
-import Stream from 'stream';
+import { performance } from 'perf_hooks';
+
 
 //const OLLAMA_ENDPOINT = 'http://localhost:11434/api/generate';
 const OLLAMA_ENDPOINT = 'http://localhost:11434/api/chat';
@@ -197,6 +198,13 @@ export async function POST(request: NextRequest) {
   const contentFiles = form.getAll("contentFiles") as File[];
   const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
 
+  const modelTiming: any = {
+    model: OLLAMA_MODEL,
+    status: 'ok',
+    contextTimeMs: null,
+    quizTimeMs: null,
+  };
+
   try {
     const { userId, error } = await verifyAuth(request);
     if (error) return NextResponse.json({ error }, { status: 401 });
@@ -219,10 +227,11 @@ export async function POST(request: NextRequest) {
     const tmpDir = path.join(process.cwd(), 'tmp');
     await fs.promises.mkdir(tmpDir, { recursive: true });
 
-    const perFileContexts: string[] = [];
+    //const perFileContexts: string[] = [];
 
-    //let combinedText = '';
+    let combinedText = '';
     console.log("Starting Phase 1: Generating context...");
+    const startContext = performance.now();
     for (let i = 0; i < allFiles.length; i++) {
         const file = allFiles[i];
         let filePath: string;
@@ -239,35 +248,40 @@ export async function POST(request: NextRequest) {
         const text = await extractTextFromPDF(filePath);
         if (file instanceof File) await fs.promises.unlink(filePath); 
 
-        const singleFilePrompt = contextUserPromptTemplate(text);
+        //const singleFilePrompt = contextUserPromptTemplate(text);
 
         //const singleFileContext = await queryOllamaGenerate(contextSystemPrompt, singleFilePrompt, false);
-        const singleFileContext = await queryOllamaChat(contextSystemPrompt, singleFilePrompt);
+        //const singleFileContext = await queryOllamaChat(contextSystemPrompt, singleFilePrompt);
 
-        console.log(singleFileContext);
-        perFileContexts.push(singleFileContext);
-        //combinedText += `\n\n### Fichier ${i + 1} (${filePath}):\n\n${text}`;
+        //console.log(singleFileContext);
+        //perFileContexts.push(singleFileContext);
+        combinedText += `\n\n### Fichier ${i + 1} (${filePath}):\n\n${text}`;
         
         //const debugOutputPath = path.join(tmpDir, 'combined_text_debug.txt');
         //await fs.promises.writeFile(debugOutputPath, combinedText, 'utf-8');
         //console.log(`Combined text written to: ${debugOutputPath}`);
     }
 
-    const combinedContext = perFileContexts.join('\n\n');
+    //const combinedContext = perFileContexts.join('\n\n');
 
-    //const contextPrompt = contextUserPromptTemplate(combinedText);
+    const contextPrompt = contextUserPromptTemplate(combinedText);
     //const contextText = await queryOllamaGenerate(contextSystemPrompt, contextPrompt, false);
-    //const contextText = await queryOllamaChat(contextSystemPrompt, contextPrompt);
+    const contextText = await queryOllamaChat(contextSystemPrompt, contextPrompt);
+    const endContext = performance.now();
+    modelTiming.contextTimeMs = Math.round(endContext - startContext);
 
-    //console.log("Context Generated:\n", contextText);
-    console.log("Context Generated:\n", combinedContext);
+    console.log("Context Generated:\n", contextText);
+    //console.log("Context Generated:\n", combinedContext);
 
     console.log("Starting Phase 2: Generating quiz...");
 
-    //const quizPrompt = quizUserPromptTemplate(contextText);
-    const quizPrompt = quizUserPromptTemplate(combinedContext);
+    const quizPrompt = quizUserPromptTemplate(contextText);
+    //const quizPrompt = quizUserPromptTemplate(combinedContext);
     //const quizText = await queryOllamaGenerate(quizSystemPrompt, quizPrompt, true);
+    const startQuiz = performance.now();
     const quizText = await queryOllamaChat(quizSystemPrompt, quizPrompt);
+    const endQuiz = performance.now();
+    modelTiming.quizTimeMs = Math.round(endQuiz - startQuiz);
     //const parsedQuiz = JSON.parse(quizText);
 
     let quizJSON;
@@ -294,7 +308,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ context: combinedContext /*contextText*/, quiz: quizText });
+    console.log(`Eval created successfully for model ${OLLAMA_MODEL}`);
+    console.log(`Context took ${modelTiming.contextTimeMs}ms`);
+    console.log(`Quiz took ${modelTiming.quizTimeMs}ms`);
+
+    return NextResponse.json({ context: /*combinedContext*/ contextText, quiz: quizText });
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
