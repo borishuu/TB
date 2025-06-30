@@ -17,6 +17,8 @@ export interface GenerateOptions {
         filePath: string;
         mimeType: string;
     })[];
+    questionTypes: string[];
+    globalDifficulty: string;
 }
 
 export interface GenerationResult {

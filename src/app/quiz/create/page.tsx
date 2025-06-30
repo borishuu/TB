@@ -15,13 +15,13 @@ interface SuggestedFile {
 export default function CreateQuiz() {
   const [title, setTitle] = useState('');
   const [topics, setTopics] = useState('');
+  const [difficulty, setDifficulty] = useState('medium');
+  const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [suggestedFiles, setSuggestedFiles] = useState<SuggestedFile[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [localDragActive, setLocalDragActive] = useState(false);
-  const poolInputRef = useRef<HTMLInputElement>(null);
   const localInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
@@ -35,10 +35,10 @@ export default function CreateQuiz() {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('topics', topics);
+      formData.append('difficulty', difficulty);      
+      questionTypes.forEach((type) => formData.append('questionTypes', type));
       files.forEach((file) => formData.append('contentFiles', file));
-      suggestedFiles.forEach((file) =>
-        formData.append('suggestedFileIds', String(file.id))
-      );
+      suggestedFiles.forEach((file) => formData.append('suggestedFileIds', String(file.id)));
 
       const response = await fetch('/api/quiz', {
         method: 'POST',
@@ -51,7 +51,7 @@ export default function CreateQuiz() {
 
       const data = await response.json();
       console.log(data);
-      // router.push('/quiz');
+      // router.push('/some-success-page');
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -109,6 +109,19 @@ export default function CreateQuiz() {
     setSuggestedFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
+  const toggleQuestionType = (type: string) => {
+    setQuestionTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const questionTypeOptions = [
+    'Écriture de code',
+    'Compréhension de code',
+    'QCM',
+    'Question ouverte',
+  ];
+
   return (
     <div className="flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-3xl">
@@ -117,6 +130,7 @@ export default function CreateQuiz() {
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Titre</label>
             <input
@@ -128,18 +142,53 @@ export default function CreateQuiz() {
             />
           </div>
 
+          {/* Topics */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Sujets</label>
             <textarea
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Indiquez les sujets à aborder (ex: récursivité, typage, etc.)"
+              placeholder="Indiquez les sujets à aborder (ex: récursivité, typage...)"
               rows={4}
               value={topics}
               onChange={(e) => setTopics(e.target.value)}
             />
           </div>
 
-          {/* Files pool upload section */}
+          {/* Difficulty */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Difficulté globale</label>
+            <select
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+            >
+              <option value="very_easy">Très facile</option>
+              <option value="easy">Facile</option>
+              <option value="medium">Moyen</option>
+              <option value="hard">Difficile</option>
+              <option value="very_hard">Très difficile</option>
+            </select>
+          </div>
+
+          {/* Question Types */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Types de questions</label>
+            <div className="flex flex-wrap gap-4 mt-2">
+              {questionTypeOptions.map((type) => (
+                <label key={type} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={questionTypes.includes(type)}
+                    onChange={() => toggleQuestionType(type)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <span>{type}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Suggested Files */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers depuis mon pool</label>
             <button
@@ -154,7 +203,7 @@ export default function CreateQuiz() {
                 Recherche automatique depuis les sujets donnés, ou{' '}
                 <span className="text-blue-600 underline cursor-pointer">parcourir</span>
               </p>
-              {suggestedFiles.length > 0 && (                
+              {suggestedFiles.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-3">
                   {suggestedFiles.map((file) => (
                     <div key={file.id} className="relative">
@@ -164,13 +213,12 @@ export default function CreateQuiz() {
                       />
                     </div>
                   ))}
-                </div>                
+                </div>
               )}
             </div>
-            
           </div>
 
-          {/* Local file upload section */}
+          {/* Local Files */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers locaux</label>
             <div
@@ -200,7 +248,6 @@ export default function CreateQuiz() {
                   parcourir
                 </span>
               </p>
-
               {files.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-3">
                   {files.map((file, index) => (
