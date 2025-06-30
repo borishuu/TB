@@ -138,7 +138,7 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                             {`${question.number}.`}
                         </div>
                         <ReactMarkdown components={renderers}>
-                            {question.questionText}
+                            {question.questionText /* TODO fix sometimes code blocks not formatted correctly */}
                         </ReactMarkdown>
                     </div>
                 )}
