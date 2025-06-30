@@ -1,0 +1,43 @@
+export const contextSystemPrompt = `
+Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
+`;
+
+export const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu des fichiers fournis.
+
+${combinedFileContent}
+
+Instructions :
+- Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+- Mélangez intelligemment les contenus issus des différents fichiers.
+- Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
+- Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
+
+Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+`;
+
+
+export const quizSystemPrompt = `
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. Vous retournez toujours un objet JSON valide et structuré.
+`;
+
+export const quizUserPromptTemplate = (contextText: string) => `
+Générez une évaluation basé sur le contexte suivant :
+
+${contextText}
+
+Consignes :
+
+- Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
+- L'ordre des questions doit être indépendant de celui des chapitres ou sections du contexte.
+- Variez intelligemment les types de questions : QCM (choix multiples), questions ouvertes, compréhension de code, écriture de code.
+- Le type de question doit être choisi en fonction du contenu testé :
+  - Si la notion est pratique ou liée à la programmation, privilégiez la compréhension de code ou l'écriture de code.
+  - Si la notion est théorique ou conceptuelle, privilégiez des QCM ou questions ouvertes.
+  - Si un concept présente plusieurs facettes (théorique + pratique), vous pouvez mélanger les types ou choisir celui qui permet la meilleure évaluation de la compréhension.
+- Les questions doivent être difficiles et demander une réflexion approfondie, pas simplement de la restitution de faits.
+- Les questions d'écriture de code doivent fournir des exmples de résultats ou de comportements attendus.
+- Évitez les questions trivia ou trop simples.
+- Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.
+`;

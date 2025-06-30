@@ -1,75 +1,16 @@
 import {NextRequest, NextResponse} from 'next/server';
-import { GoogleGenerativeAI, ObjectSchema, Schema, SchemaType } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-import fs from 'fs';
-import path from 'path';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
-const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY as string);
-
-// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
-const quizSchema: Schema = {
-    type: SchemaType.OBJECT,
-    properties: {
-        content: {
-            type: SchemaType.ARRAY,
-            minItems: 10,
-            description: "Array of questions for the quiz.",
-            items: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    number: {
-                        type: SchemaType.STRING,
-                        description: "The question number.",
-                        nullable: false
-                    },
-                    questionText: {
-                        type: SchemaType.STRING,
-                        description: "The text of the question.",
-                        nullable: false
-                    },
-                    questionType: {
-                        type: SchemaType.STRING,
-                        format: "enum",
-                        description: "The type of the question.",
-                        enum: ["mcq", "open", "codeComprehension", "codeWriting"],
-                        nullable: false
-                    },
-                    options: {
-                        type: SchemaType.ARRAY,
-                        description: "Array of answer options for multiple choice questions.",
-                        items: {
-                        type: SchemaType.STRING
-                        },
-                        minItems: 0
-                    },
-                    correctAnswer: {
-                        type: SchemaType.STRING,
-                        description: "The correct answer for the question.",
-                        nullable: false
-                    },
-                    explanation: {
-                        type: SchemaType.STRING,
-                        description: "An explanation for the correct answer."
-                    }
-                },
-                required: ["number", "questionText", "questionType", "correctAnswer"],
-            }
-        }
-    },
-    required: ["content"],
-};
-
-const genModel = 'models/gemini-2.0-flash'
+import { GeminiHandler } from '@/lib/llm/GeminiHandler';
+import { LLMHandler } from '@/types';
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
-
     const title = form.get('title') as string;
     const contentFiles = form.getAll("contentFiles") as File[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
+
+    const llmHandler: LLMHandler = new GeminiHandler(process.env.GEMINI_API_KEY as string);
 
     try {
 
@@ -103,93 +44,15 @@ export async function POST(request: NextRequest) {
           poolFiles = results;
         }
 
-        // Upload all files with Gemini API after writing them to a temporary location
-        const fileUploadResults = await Promise.all(
-          [...contentFiles, ...poolFiles].map(async (file) => {
-            if (file instanceof File) {
-              // Handle local uploaded files
-              const fileBuffer = await file.arrayBuffer();
-              const tmpDir = path.join(process.cwd(), 'tmp');
-              await fs.promises.mkdir(tmpDir, { recursive: true });
-              const tmpFilePath = path.join(tmpDir, file.name);
-              await fs.promises.writeFile(tmpFilePath, Buffer.from(fileBuffer));
-        
-              const uploadResult = await fileManager.uploadFile(tmpFilePath, {
-                mimeType: file.type,
-                displayName: file.name,
-              });
-        
-              await fs.promises.unlink(tmpFilePath);
-              return uploadResult;
-            } else {
-              // Handle pool files (already stored on disk)
-              const uploadResult = await fileManager.uploadFile(file.filePath, {
-                mimeType: file.mimeType,
-                displayName: file.fileName,
-              });
-              return uploadResult;
-            }
-          })
-        );        
+        const allFiles: (File | { fileName: string, filePath: string, mimeType: string })[] = [...contentFiles, ...poolFiles];
 
-        console.log("Starting Phase 1: Generating context...");
-        const contextModel = genAI.getGenerativeModel({ model: genModel });
-
-        const contextPrompt = `
-Analysez le contenu des fichiers fournis et générez un résumé structuré des concepts clés abordés.
-- Mélangez les thèmes des différents fichiers de manière cohérente.
-- Identifiez les notions principales et expliquez-les clairement.
-- Mettez en avant les points importants qui peuvent être utilisés pour créer un quiz.
-- Ne copiez pas directement le contenu des fichiers, mais reformulez et synthétisez.
-- Présentez le résumé sous une forme organisée et lisible.
-        `;
-
-        // Generate context with uploaded files
-        const contextResult = await contextModel.generateContent([
-            contextPrompt,
-            ...fileUploadResults.map(uploadResult => ({ fileData: {
-                fileUri: uploadResult.file.uri,
-                mimeType: uploadResult.file.mimeType,
-            } }))
-        ]);
-        
-        const contextText = contextResult.response.text();
-        console.log("Phase 1 Completed: Context generated.");
-        console.log("Context:", contextText);
-
-        console.log("Starting Phase 2: Generating quiz...");
-
-        const quizPrompt = `
-Générez un quiz basé sur le résumé suivant :
-
-${contextText}
-
-- Incluez au moins 10 questions.
-- L'ordre des questions doit être indépendant de l'ordre des chapitres fournis.
-- Assurez-vous que les questions couvrent les concepts du résumé.
-- Variez le type de questions : QCM, questions ouvertes, compréhension de code, écriture de code.
-- La quantité des différents types de questions doit être équilibrée.
-- Les exercices doivent être difficiles est doivent nécessiter beaucoup de reflexion.`;
-
-        const quizModel = genAI.getGenerativeModel({
-            model: genModel,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: quizSchema
-            }
-        });
-
-        const quizResult = await quizModel.generateContent([
-            quizPrompt
-        ]);
-        
-        const quizText = quizResult.response.text();
-        console.log("Phase 2 Completed: Quiz generated.");
+        const generationResult = await llmHandler.generateEvaluation({ files: allFiles});
+     
 
         // Ensure quizText is valid JSON before saving
         let quizJSON;
         try {
-            quizJSON = JSON.parse(quizText);
+            quizJSON = JSON.parse(generationResult.evaluation);
         } catch (error) {
             console.error("Invalid JSON format:", error);
             return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
@@ -200,15 +63,15 @@ ${contextText}
                 title: title,
                 content: quizJSON,
                 prompts: JSON.parse(JSON.stringify({
-                    contextPrompt: contextPrompt,
-                    quizPrompt: quizPrompt
+                    contextPrompt: "",
+                    quizPrompt: ""
                 })),
-                genModel: genModel,
+                genModel: llmHandler.genModel,
                 author: {connect: {id: userId as number}},
             },
         });
 
-        return NextResponse.json({ context: contextText, quiz: quizText });
+        return NextResponse.json(generationResult);
     } catch (error) {
         console.log(error);
         return NextResponse.json({ error: "Failed to login" }, { status: 500 });
