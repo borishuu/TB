@@ -39,7 +39,7 @@ const quizSchema: Schema = {
 };
 
 export class GeminiHandler implements LLMHandler {
-  genModel = 'models/gemini-2.0-flash';
+  genModel = 'models/gemini-2.5-flash';
   private genAI: GoogleGenerativeAI;
   private fileManager: GoogleAIFileManager;   
 
@@ -117,7 +117,7 @@ export class GeminiHandler implements LLMHandler {
       },
     });
 
-    const evalPrompt = `${prompts.quizSystemPrompt} \n\n ${prompts.quizUserPromptTemplate(context)}`;
+    const evalPrompt = `${prompts.quizSystemPrompt} \n\n ${prompts.quizUserPromptTemplate(context, options.globalDifficulty, options.questionTypes)}`;
 
     const result = await model.generateContent([ evalPrompt ]);
     return result.response.text();

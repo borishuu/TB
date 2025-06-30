@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
     const form = await request.formData();
     const title = form.get('title') as string;
     const contentFiles = form.getAll("contentFiles") as File[];
+    const globalDifficulty = form.get("difficulty") as string;
+    const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
 
     const llmHandler: LLMHandler = new GeminiHandler(process.env.GEMINI_API_KEY as string);
@@ -29,6 +31,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "At least one file must be provided" }, { status: 400 });
         }
 
+        if (!globalDifficulty) {
+            return NextResponse.json({ error: "Global difficulty must be provided" }, { status: 400 });
+        }
+
+        if (questionTypes.length === 0) {
+            return NextResponse.json({ error: "At least one question type must be provided" }, { status: 400 });
+        }
+
         let poolFiles: { fileName: string, filePath: string, mimeType: string }[] = [];
 
         if (suggestedFileIds.length > 0) {
@@ -46,7 +56,7 @@ export async function POST(request: NextRequest) {
 
         const allFiles: (File | { fileName: string, filePath: string, mimeType: string })[] = [...contentFiles, ...poolFiles];
 
-        const generationResult = await llmHandler.generateEvaluation({ files: allFiles});
+        const generationResult = await llmHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty });
      
 
         // Ensure quizText is valid JSON before saving
