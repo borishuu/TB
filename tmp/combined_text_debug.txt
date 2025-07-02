@@ -1,0 +1,2241 @@
+
+
+### Fichier 1 (C:\Users\boris\Documents\Etudes\S6\TB\tb-app\tmp\25-14-LazyListLazyEval.pdf):
+
+
+
+Programmation AppliquéeProgrammation Appliquée
+Programmation AppliquéeProgrammation Appliquée
+Programmation Appliquée
+Programmation Appliquée
+Programmation AppliquéeProgrammation AppliquéeProgrammation Appliquée
+en Scalaen Scala
+en Scalaen Scala
+en Scala
+en Scala
+en Scalaen Scalaen Scala
+Chapitre 8: LazyList et EvaluationChapitre 8: LazyList et Evaluation
+Chapitre 8: LazyList et EvaluationChapitre 8: LazyList et Evaluation
+Chapitre 8: LazyList et Evaluation
+Chapitre 8: LazyList et Evaluation
+Chapitre 8: LazyList et EvaluationChapitre 8: LazyList et EvaluationChapitre 8: LazyList et Evaluation
+ParesseuseParesseuse
+ParesseuseParesseuse
+Paresseuse
+Paresseuse
+ParesseuseParesseuseParesseuse
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran FatemiProf. Nastaran Fatemi
+Christopher MeierChristopher Meier
+Christopher MeierChristopher Meier
+Christopher Meier
+Christopher Meier
+Christopher MeierChristopher MeierChristopher Meier
+Printemps 2025Printemps 2025
+Printemps 2025Printemps 2025
+Printemps 2025
+Printemps 2025
+Printemps 2025Printemps 2025Printemps 2025
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur Répondre à tous les quiz sur 
+https://etc.ch/kcpChttps://etc.ch/kcpC
+https://etc.ch/kcpChttps://etc.ch/kcpC
+https://etc.ch/kcpC
+https://etc.ch/kcpC
+https://etc.ch/kcpChttps://etc.ch/kcpChttps://etc.ch/kcpC
+1
+
+Dans ce cours
+Collections Scala et opérations de recherche combinatoire
+Problème de performance
+Evaluation retardée
+Définition de LazyList
+Méthodes sur LazyList
+Implémentation de LazyList
+Evaluation paresseuse
+Lazy val et LazyList
+Listes infinis
+2
+
+Les collections Scala et la recherche
+combinatoire (1)
+Dans les cours précédents nous avons étudié plusieurs collections immuables qui
+fournissent des opérations puissantes, comme les fonctions d’ordre supérieur et
+les expressions for.
+Ces fonctions sont particulièrement utiles pour implémenter des algorithmes de
+recherche combinatoire: algorithmes de recherche généralement considérés
+difficiles, mais réalisés en explorant efficacement une espace de solutions large.
+Les 8 dames
+Tic tac toe
+Puissance 4
+Etc.
+3
+
+Les collections Scala et la recherche
+combinatoire (2)
+Par exemple, pour trouver le deuxième nombre premier entre 1000 et 10’000, on
+peut écrire:
+Ce qui est beaucoup plus court que son alternative récursive:
+((1000 to 10000) filter isPrime)(1)
+defsecondPrime(from:Int, to:Int)=nthPrime(from, to,2)
+defnthPrime(from:Int, to:Int, n:Int):Int=
+if from >= to thenthrowError(”no prime”)
+elseifisPrime(from)then
+if n ==1then from elsenthPrime(from +1, to, n -1)
+elsenthPrime(from +1, to, n)
+4
+
+Problème de performance
+Mais d’un point de vu de performance, l’expression
+a un problème grave: elle construit une liste de tous les nombres premiers entre
+1000 et 10000 pour s’intéresser seulement aux deux premiers.
+Si on diminue la borne supérieure, on pourrait accélérer la vitesse, mais au risque
+de complètement perdre le deuxième nombre premier.
+((1000 to 10000).filter(isPrime)(1)
+5
+
+Evaluation retardée
+Cependant, on peut utiliser une astuce pour rendre efficace le code plus court:
+En évitant de calculer les éléments d’une séquence jusqu’à ce qu’il soit nécessaire
+pour le résultat de l’évaluation (ce qui peut être jamais).
+Cette idée est implémentée dans une nouvelle classe: LazyList.
+Les LazyLists sont similaires aux listes, mais leurs éléments sont évalués
+seulement à la demande.
+6
+
+Définir les LazyLists
+Les LazyLists sont définis à partir d’une constante LazyList.empty et le
+constructeur LazyList.cons.
+Par exemple
+On peut aussi les construire comme les autres collections en utilisant l’objet
+LazyList:
+On peut également appeler la méthode to(LazyList) sur une collection donnée
+pour la transformer en LazyList:
+val xs = LazyList.cons(1, LazyList.cons(2, LazyList.empty))
+LazyList(1,2,3)
+(1 to 1000).to(LazyList)//> res0: LazyList[Int] = LazyList(<not computed>)
+7
+
+LazyList Range
+Prenons l’expression (lo until hi).to(LazyList)
+On peut écrire une fonction pour génère ce LazyList directement (sans utiliser la
+méthode to(LazyList)):
+D’une manière similaire à une fonction qui génère une liste:
+deflazyRange(lo:Int, hi:Int): LazyList[Int]=
+if lo >= hi then LazyList.empty
+else LazyList.cons(lo,lazyRange(lo +1, hi))
+deflistRange(lo:Int, hi:Int):List[Int]=
+if lo >= hi then Nil
+else lo ::listRange(lo +1, hi)
+8
+
+Comparaison des deux fonctions
+Ces deux dernières fonctions ont presque la même structure, mais elles s’évaluent
+totalement différemment:
+listRange(start,end) produit une liste avec  éléments et la
+retourne
+lazyRange(start,end) retourne un seul objet de type LazyList. Les
+éléments sont calculés que quand cela est nécessaire, à savoir quand on
+appelle la tête ou le tail du LazyList.
+end–start
+9
+
+Méthodes sur LazyLists
+LazyList supporte presque toutes les méthodes de List.
+Par exemple, pour trouver le deuxième nombre premier entre 1000 et 10000:
+LazyList.range(1000,10000).filter(isPrime)(1)
+10
+
+L’opérateur Cons de LazyList
+La seule exception majeur est ::.
+x :: xs génère toujours une liste et non un LazyList.
+Il y a un opérateur alternatif pour générer un LazyList et celui-ci est #::
+On peut utiliser #:: aussi bien dans les expressions que dans les motifs.
+x #:: xs == LazyList.cons(x, xs)
+11
+
+Implémentation des LazyLists (1)
+L’implémentation des LazyLists est assez subtile.
+Pour simplifier, on considère d’abord que les LazyLists ont seulement la queque
+parreseuse. head et isEmpty sont calculé quand LazyList est créee. Ceci n’est pas
+le vrai comportement de LazyList, mais rend l’implémentation plus facile à
+comprendre.
+Voici le trait LazyList:
+Comme pour les listes, toutes les autres méthodes peuvent être définies à partir
+de ces trois méthodes.
+trait LazyList[+T]extendsSeq[T]:
+def isEmpty:Boolean
+def head: T
+def tail: LazyList[T]
+...
+12
+
+Implémentation des LazyLists (2)
+Les implémentations concrètes de LazyLists sont définies dans l’objet compagnon
+de LazyList. Voici un premier extrait:
+object LazyList:
+def cons[T](hd: T, tl:=> LazyList[T])=new LazyList[T]
+def isEmpty =false
+def head = hd
+def tail = tl
+overridedef toString ="LazyList("+ hd +",? )"
+val empty =new LazyList[Nothing]
+def isEmpty =true
+def head =thrownewNoSuchElementException("empty.head")
+def tail =thrownewNoSuchElementException("empty.tail")
+overridedef toString ="LazyList()"
+13
+
+Différence de List
+La seule différence importante entre l’implémentation de List et de LazyList
+(simplifiée) concerne tl qui est le deuxième paramètre de LazyList.cons.
+Dans l’implémentation de LazyList il s’agit d’un passage de paramètre par nom
+(call by name).
+C’est pour cela que le deuxième argument de LazyList.cons n’est pas évalué sur
+le point de l’appel.
+Il est par contre évalué à chaque fois que quelqu’un appelle tail sur un objet
+LazyList.
+14
+
+D’autres méthodes de LazyList
+Les autres méthodes de LazyList sont implémentées de façon similaire à leurs
+méthodes homologues dans List.
+Par exemple, voici l’implémentation de filter:
+trait LazyList[+T]extendsSeq[T]:
+...
+deffilter(p: T =>Boolean): LazyList[T]=
+if isEmpty thenthis
+elseifp(head)thencons(head, tail.filter(p))
+else tail.filter(p)
+15
+
+Evaluation paresseuse
+L’implémentation proposée pour LazyList empêche le calcule non-nécessaire des
+éléments de tail, tant qu’ils ne sont pas requis. Mais, elle souffre d’un autre
+problème potentiel de performance: si tail est appelé plusieurs fois, le LazyList
+correspondant est recalculé à chaque fois.
+On peut éviter ce problème en stockant le résultat de la première évaluation de
+tail et en réutilisant le résultat stocké au lieu de le recalculer.
+Cette optimisation fait du sens car dans un langage purement fonctionnel, une
+expression produit le même résultat à chaque fois qu’elle est évaluée.
+On appelle ce schéma évaluation paresseuse (au contraire de l’évaluation par
+nom, où tout est recalculé, et de l’évaluation stricte pour les paramètres
+normaux et les définitions avec val. )
+16
+
+Evaluation paresseuse
+A lazy dog
+Laziness means do things as late as possible and never do
+them twice!
+17
+
+Evaluation paresseuse en Scala
+Haskel est un langage de programmation fonctionnelle qui utilise l’évaluation
+paresseuse par défaut.
+Scala utilise par défaut l’évaluation stricte, mais permet l’évaluation paresseuse
+des définitions de valeur en utilisant la forme lazy val:
+En préfixant la définition val avec le modificateur lazy, l’expression
+d’initialisation expr, sera seulement évaluée la première fois que val est utilisée.
+Ceci est semblable à la situation où x est définie comme une méthode sans
+paramètre en utilisant def x = expr
+La différence de lazy val et def c’est que lazy val n’est jamais évaluée plus
+qu’une fois.
+lazyval x = expr
+18
+
+Quiz
+Prenons le programme suivant:Si on exécute ce programme, que sera
+affiché comme effet secondaire de
+l’évaluation de expr?
+def expr =
+val x ={print(”x”);1}
+lazyval y ={print(”y”);2}
+def z ={print(”z”);3}
+z+y+x+z+y+x
+expr
+zyxzyxA
+xzyxB
+xzyzC
+zyzzD
+Autre choseE
+Répond à la question 1 sur https://etc.ch/kcpC
+19
+
+Lazy val et LazyList
+Si on utilise lazy val pour tail, l’implémentation de LazyList.cons devient
+plus efficace:
+Donc au lieu de def tail = t1, on utilise lazyval tail = t1.
+Avec ce changement, comme avant, on évalue le tail la 1ère fois que c’est
+demandé, mais cette-fois-ci on réutilise l’évaluation de tail les prochaines fois
+qu’elle sera demandée. Alors, on empêche les calcules non-nécessaires.
+def cons[T](hd: T, tl:=> LazyList[T])=new LazyList[T]:
+def head = hd
+lazyval tail = tl
+...
+20
+
+Trace d’évaluation (1)
+Pour se convaincre que l’implémentation des LazyLists évite véritablement les
+calculs non-nécessaires, on suit la trace d’exécution de l’expression suivante:
+lazyRange(1000,10000).filter(isPrime).apply(1)
+→
+(if1000>=10000then empty  // by extending lazyRange
+elsecons(1000,lazyRange(1000+1,10000))
+.filter(isPrime).apply(1)
+→
+cons(1000,lazyRange(1000+1,10000))// by evaluating if
+.filter(isPrime).apply(1)
+21
+
+Trace d’évaluation (2)
+On renomme cons(1000,lazyRange(1000+1,10000)) C1.
+C1.filter(isPrime).apply(1)
+→
+(if C1.isEmpty then C1  // by expanding filter
+elseifisPrime(C1.head)thencons(C1.head,C1.tail.filter(isPrime))
+else C1.tail.filter(isPrime))
+.apply(1)
+→
+(ifisPrime(C1.head)thencons(C1.head, C1.tail.filter(isPrime))
+else C1.tail.filter(isPrime))// by evaluating if
+.apply(1)
+→
+(ifisPrime(1000)thencons(C1.head, C1.tail.filter(isPrime))
+else C1.tail.filter(isPrime))// by evaluating head
+.apply(1)
+22
+
+Trace d’évaluation (3)
+La séquence d’évaluation continue jusqu’à ce que on trouve le 1er nombre
+premier
+↠
+(iffalsethencons(C1.head, C1.tail.filter(isPrime))// eval. isPrime
+else C1.tail.filter(isPrime))
+.apply(1)
+→
+C1.tail.filter(isPrime).apply(1)// by evaluating if
+↠
+lazyRange(1001,10000)// by evaluating tail
+.filter(isPrime).apply(1)
+↠
+lazyRange(1009,10000)
+.filter(isPrime).apply(1)
+↠
+cons(1009,lazyRange(1009+1,10000))// by eval lazyRange
+.filter(isPrime).apply(1)
+23
+
+Trace d’évaluation (4)
+On renomme cons(1009,lazyRange(1009+1,10000)) en C2.
+Supposons que apply est défini comme ceci dans LazyList[T]:
+C2.filter(isPrime).apply(1)
+↠
+cons(1009, C2.tail.filter(isPrime)).apply(1)//by eval. filter
+→
+if1==0thencons(1009, C2.tail.filter(isPrime)).head // by eval. apply
+elsecons(1009, C2.tail.filter(isPrime)).tail.apply(0)
+defapply(n:Int): T =
+if n ==0then head
+else tail.apply(n-1)
+24
+
+Trace d’évaluation (5)
+On renomme cons(1009,lazyRange(1009+1,10000)) en C2.
+C2.filter(isPrime).apply(1)
+↠
+cons(1009, C2.tail.filter(isPrime)).apply(1)//by eval. filter
+→
+if1==0thencons(1009, C2.tail.filter(isPrime)).head // by eval. apply
+elsecons(1009, C2.tail.filter(isPrime)).tail.apply(0)
+→
+C2.tail.filter(isPrime).apply(0)// by eval. tail
+→
+lazyRange(1010,10000).filter(isPrime).apply(0)// by eval. tail
+25
+
+Trace d’évaluation (6)
+La séquence d’évaluation continue jusqu’à ce qu’on a le 2ème nombre premier:
+On renomme cons(1013,lazyRange(1013+1,10000) en C3
+On voit que seule la partie de LazyList qui est nécessaire pour le calcul du résultat
+a été construite.
+→
+lazyRange(1013,10000).filter(isPrime).apply(0)
+→
+cons(1013,lazyRange(1013+1,10000))// by eval. lazyRange
+.filter(isPrime).apply(0)
+=
+C3.filter(isPrime).apply(0)
+↠
+cons(1013, C3.tail.filter(isPrime)).apply(0)// by eval. Filter
+→
+1013// by eval. apply
+26
+
+Les listes infinis
+On a vu que les éléments d’un LazyList sont calculés seulement quand ils sont
+requis pour produire un résultat.
+On pourrait donc définir des listes infinis!
+Par exemple, voici une liste de tous les entiers commençant par un nombre
+donné:
+La liste de tous les nombres naturels:
+La liste de tous les multiples de 4:
+deffrom(n:Int): LazyList [Int]= n #::from(n+1)
+val nats =from(0)
+nats map(_ *4)
+27
+
+Crible d’Ératosthène
+Le crible d’Ératosthène est un procédé qui permet de trouver tous les nombres
+premiers inférieurs à un certain entier naturel donné .
+Crible d’Ératosthène
+N
+28
+
+Crible d’Ératosthène
+L’idée est la suivante:
+Commencer avec les nombres entiers, à partir de 2, le premier nombre
+premier.
+Eliminer tous les multiples de 2.
+Le premier élément de liste de résultat est 3, un nombre premier.
+Eliminer tous les multiples de 3.
+Itérer toujours. A chaque étape, le premier nombre dans la liste est un nombre
+premier
+Et on élimine tous ces multiples.
+29
+
+Crible d’Ératosthène: le code
+Voici une fonction qui implémente ce principe:
+Pour voir une liste des  premiers nombres primaires, on peut écrire:
+defsieve(s: LazyList[Int]): LazyList[Int]=
+s.head #::sieve(s.tail.filter(_ % s.head !=0))
+val primes =sieve(from(2))
+N
+(primes.take(N)).toList
+30
+
+Quiz
+Prenons les deux expressions suivantes qui expriment les listes infinis de
+multiples d’un nombre donné :
+Quel LazyList génère ces résultats plus rapidement?
+N
+val xs =from(1).map(_ * N)
+val ys =from(1).filter(_ % N ==0)
+Le premierA
+Le deuxièmeB
+Répond à la question 2 sur https://etc.ch/kcpC
+31
+
+Exercice
+1. Ecrire une fonction qui prend un LazyList en paramètre et le transforme en une
+List:
+2. Ecrire une fonction qui prend un LazyList en paramètre et retourne le LazyList
+contenant seulement les n premiers éléments.
+def toList[A](s:LazyList[A]):List[A]=???
+def take [A](s: LazyList[A], n:Int): LazyList[A]=???
+32
+
+
+
+### Fichier 2 (C:\Users\boris\Documents\Etudes\S6\TB\tb-app\tmp\25-15-Futures.pdf):
+
+
+
+Programmation AppliquéeProgrammation Appliquée
+Programmation AppliquéeProgrammation Appliquée
+Programmation Appliquée
+Programmation Appliquée
+Programmation AppliquéeProgrammation AppliquéeProgrammation Appliquée
+en Scalaen Scala
+en Scalaen Scala
+en Scala
+en Scala
+en Scalaen Scalaen Scala
+Chapitre 9: Programmation asynchrone avecChapitre 9: Programmation asynchrone avec
+Chapitre 9: Programmation asynchrone avecChapitre 9: Programmation asynchrone avec
+Chapitre 9: Programmation asynchrone avec
+Chapitre 9: Programmation asynchrone avec
+Chapitre 9: Programmation asynchrone avecChapitre 9: Programmation asynchrone avecChapitre 9: Programmation asynchrone avec
+les Futursles Futurs
+les Futursles Futurs
+les Futurs
+les Futurs
+les Futursles Futursles Futurs
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran FatemiProf. Nastaran Fatemi
+Christopher MeierChristopher Meier
+Christopher MeierChristopher Meier
+Christopher Meier
+Christopher Meier
+Christopher MeierChristopher MeierChristopher Meier
+Printemps 2025Printemps 2025
+Printemps 2025Printemps 2025
+Printemps 2025
+Printemps 2025
+Printemps 2025Printemps 2025Printemps 2025
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur Répondre à tous les quiz sur 
+https://etc.ch/2XRKhttps://etc.ch/2XRK
+https://etc.ch/2XRKhttps://etc.ch/2XRK
+https://etc.ch/2XRK
+https://etc.ch/2XRK
+https://etc.ch/2XRKhttps://etc.ch/2XRKhttps://etc.ch/2XRK
+1
+
+Dans ce cours
+Calculs asynchrones utilisant des objets Future
+Gestion des résultats de calculs asynchrones par attente active
+Installation de rappel pour gérer les résultats des calculs asynchrones
+Sémantique d’exception des objets Futures : utilisation du type Try
+Composition fonctionnelle des objets Futures
+For comprehention pour les objets Futures
+Gestion des échecs des objets Futures
+2
+
+Programmation asynchrone
+La programmation asynchrone fait référence au style de programmation dans
+lequel les exécutions se produisent indépendamment du flux du programme
+principal.
+La programmation asynchrone aide à éliminer le blocage
+A la place de suspendre le thread chaque fois qu’une ressource n’est pas
+disponible ; un calcul séparé est planifié pour se poursuivre une fois que la
+ressource devient disponible.
+Dans cette section, nous étudions une abstraction en Scala, appelée future qui est
+spécialement conçue pour faciliter la composition des calculs asynchrones.
+3
+
+Threads et blocage
+Des exécutions parallèles dans un programme concurent se poursuivent sur des
+entités appelé threads.
+À tout moment, l’exécution d’un thread peut être temporairement suspendue
+jusqu’à ce qu’une condition spécifique soit remplie. Quand cela arrive, nous
+disons que le thread est bloqué.
+Pourquoi les threads sont bloqués?
+1. Nous avons une quantité limitée de ressources; plusieurs calculs qui partagent
+ces ressources doivent parfois attendre.
+2. Parfois, un calcul a besoin de données spécifiques pour continuer, et que les
+données ne sont pas encore disponibles (thread lent ou données externes).
+4
+
+Un exemple
+Supposons que nous avons une méthode getWebpage, qui prenant l’URL de
+l’emplacement de la page Web, renvoie le contenu de cette page Web:
+Cette méthode doit renvoyer une chaîne de caractères avec le contenu de la page
+Web. Cependant, sur l’envoi d’une demande HTTP, le contenu de la page Web
+n’est pas disponible immédiatement.
+La seule façon pour la méthode de renvoyer le contenu de la page Web comme
+une valeur de chaîne de caractères est d’attendre que la réponse HTTP
+arrive.
+Comme le thread qui a appelé la méthode getWebpage ne peut pas continuer
+sans le contenu de la page Web, il doit suspendre son exécution => bloquer
+defgetWebpage(url:String):String
+5
+
+Comment faire mieux?
+On sait déjà que le blocage peut avoir des effets secondaires négatifs, donc peut-
+on changer la valeur de retour de la méthode getWebpage en une valeur
+spéciale qui peut être retournée immédiatement?
+Oui! : en Scala, cette valeur spéciale est appelée un future.
+Un future est un espace réservé, c’est-à-dire un emplacement de mémoire pour
+la valeur. Cet espace réservé n’a pas besoin de contenir de valeur lorsque le
+future est créé; la valeur peut être finalement (eventually) placée dans le future
+par la méthode getWebpage.
+Ici, le type Future[String] signifie que l’objet future peut finalement contenir
+une valeur String.
+defgetWebpage(url:String):Future[String]
+6
+
+Valeur future vs calcul future
+Quand on utilise le terme future, généralement on veut dire une valeur future:
+Une valeur de type «T» dans le programme qui pourrait ne pas être disponible
+actuellement, mais qui pourrait devenir disponible plus tard.
+Dans le paquetage scala.concurrent, les futures sont représentés par le trait:
+Un calcul future est un calcul asynchrone qui produit une valeur future.
+Il peut être démarré en appelant la méthode apply sur l’objet compagnon
+Future. Il a la signature suivante dans le paquetage scala.concurrent:
+traitFuture[T]
+def apply [T](b:=> T)(implicit e: ExecutionContext):Future[T]
+7
+
+Valeur future vs calcul future
+La méthode apply ci-dessus prend deux paramètres:
+Un premier paramètre par nom (by-name) de type «T». Ceci est le corps (body)
+du calcul asynchrone qui génère une valeur de type «T».
+Un deuxième paramètre implicite ExecutionContext, qui résume où et quand
+le thread est exécuté. Vous pouvez le considérer comme le pool de threads.
+Les paramètres implicites de Scala peuvent être spécifiés lors de l’appel d’une
+méthode, de la même manière que les paramètres normaux, ou, comme ici ils
+peuvent être laissés de côté, et dans ce cas le compilateur Scala recherche une valeur
+de type ExecutionContext dans la portée environnante.
+def apply[T](b:=>T)(implicit e: ExecutionContext):Future[T]
+8
+
+Démarrer des calculs futures
+Voyons comment démarrer un calcul future dans un exemple:
+L’ordre dans lequel les appels de la méthode println s’exécutent (à l’intérieur du
+calcul future et dans le thread principal) est non déterministe.
+L’objet singleton Future suivi d’un bloc est du sucre syntaxique pour appel de la
+méthode Future.apply.
+import scala.concurrent.*
+import ExecutionContext.Implicits.global
+@main def FuturesCreate =
+deflog(msg:String):Unit=
+println(s"${Thread.currentThread.getName}: $msg")
+Future{log("the future is here")}
+log("the future is coming")
+9
+
+Attente active: isCompleted
+Dans l’exemple suivant, nous pouvons utiliser l’objet scala.io.Source pour lire le
+contenu de notre fichier build.sbt dans un calcul future.
+On voit les tentatives d’interrogation de la valeur du future jusqu’à ce qu’elle soit
+terminée.
+import scala.io.Source
+@main def futureChapter =
+val buildFile =Future{
+val f =Source.fromFile("build.sbt")
+try f.getLines.mkString("\n")finally f.close()
+}
+log(s"started reading the build file asynchronously")
+log(s"status: ${buildFile.isCompleted}")
+Thread.sleep(250)
+log(s"status: ${buildFile.isCompleted}")
+log(s"value: ${buildFile.value}")
+10
+
+Quiz
+Quel est le type de la variable buildFile dans l’exemple du slide précédent?
+StringA
+Array[String]B
+Future[String]C
+UnitD
+Un autre typeE
+Répond à la question 1 sur https://etc.ch/2XRK
+11
+
+Attente active: isCompleted
+Le thread principal appelle la méthode isCompleted sur la valeur future
+buildFile renvoyée par le calcul future.
+Il y a de fortes chances que le fichier build n’ait pas été lu si rapidement, donc
+isCompleted renvoie faux.
+Après 250 millisecondes, le thread principal appelle la méthode isCompleted
+à nouveau et cette fois, isCompleted renvoie true.
+Enfin, le thread principal appelle la méthode value, qui retourne le contenu
+du fichier build.
+WAITING
+Source.fromFile
+val buildFilebuildFile.isCompletedbuildFile.isCompletedbuildFile.value
+buildFile.complete
+future computation
+main-thread
+FALSETRUE
+Timeline: buildFile
+12
+
+Attente active
+L’attente active c’est comme appeler votre employeur potentiel toutes les cinq
+minutes pour demander si vous êtes embauché!
+Ce que vous voulez vraiment faire, c’est :
+déposer une candidature, puis postuler pour d’autres emplois, au lieu
+d’attendre pour la réponse de l’employeur.
+une fois que votre employeur décide de vous embaucher, il vous donnera un
+appel sur le numéro de téléphone que vous leur avez laissé.
+Nous voulons que les futurs fassent de même; quand ils sont terminés, ils
+devraient appeler une fonction spécifique que nous leur avons laissée. C’est le
+sujet des callback.
+13
+
+Rappel (Callback)
+Un rappel (callback) est une fonction qui est appelée une fois que ses arguments
+deviennent disponible.
+Lorsqu’un future Scala prend un rappel, il finit par appeler ce rappel. Mais, le
+future n’appelle jamais le rappel avant sa terminaison.
+Dans l’exemple suivant, on suppose qu’on doit rechercher les détails de la
+spécification d’URL du consortium W3
+Cette spécification est disponible en tant que document texte sur
+https://www.w3.org/.
+On est intéressés par toutes les occurrences du mot clé telnet.
+14
+
+Rappel : Exemple (1/5)
+La méthode getUrlSpec utilise des futures pour exécuter de manière asynchrone
+la requête HTTP.
+Il appelle d’abord la méthode fromURL pour obtenir un objet Source avec le
+document texte.
+Il appelle ensuite getLines pour obtenir une liste des lignes distinctes du
+document.
+@main def FutureCallBacks =
+defgetUrlSpec():Future[List[String]]=Future{
+val url ="http://www.w3.org/Addressing/URL/url-spec.txt"
+val f =Source.fromURL(url)
+try f.getLines.toList finally f.close()
+}
+val urlSpec:Future[List[String]]=getUrlSpec()
+15
+
+Rappel : Exemple (2/5)
+Pour trouver les lignes contenant le mot-clé telnet, on utilise la méthode find.
+La méthode find prend un paramètre List[String], mais urlSpec est de type
+Future[List[String]].
+On ne peut passer le future urlSpec directement à la méthode find; et pour
+une bonne raison, la valeur peut ne pas être disponible au moment où nous
+appelons la méthode find!
+deffind(lines:List[String], keyword:String):String=
+lines.zipWithIndex collect {
+case(line, n)if line.contains(keyword)=>(n, line)
+}mkString("\n")
+16
+
+Rappel : Exemple (3/5)
+On installe un rappel sur le future en utilisant la méthode onComplete. Cette
+méthode prend une fonction de type Try [T] => U.
+Le rappel est appliqué à la valeur de type Success [T] si le future se termine
+avec succès,
+ou sinon, à une valeur de type Failure [T].
+L’installation d’un rappel est une opération non bloquante. Le log dans le thread
+principal s’exécute immédiatement après l’enregistrement du rappel, mais
+l’instruction log dans le rappel peut être appelée beaucoup plus tard.
+urlSpec onComplete {
+caseSuccess(lines)=>log(find(lines,"telnet"))
+caseFailure(t)=>println("An error has occurred: "+
+t.getMessage)
+}
+log("callback registered, continuing with other work")
+Thread.sleep(2000)
+17
+
+Le type Try
+Try[T] est similaire à Option[T], car il s’agit d’une unité potentiellement
+détenant une valeur d’un certain type.
+Une Option[T] pourrait être:
+soit une valeur: Some[T]
+soit aucune valeur: None
+Try[T], a été spécialement conçu pour contenir:
+soit une valeur: Success[T]
+soit une exception: Failure[T]. Ainsi, Failure[T] contient plus
+d’informations qu’un simple None en disant pourquoi la valeur n’est pas là.
+18
+
+La signature de la méthode onComplete
+La méthode onComplete prend alors en paramètre :
+une fonction f: (Try[T]) => U
+le contexte d’éxecution : thread pool
+Lorsque le future est terminé, que ce soit par le biais d’une exception ou d’une
+valeur, onComplete applique la fonction fournie.
+abstractdef onComplete[U](f:(Try[T])=> U)
+(implicit executor: ExecutionContext):Unit
+19
+
+Rappel : Exemple (4/5)
+On n’est pas limité à installer un seul rappel sur le futur. Par exemple, si on veut
+également trouver toutes les occurrences du mot-clé password, on peut installer
+un autre rappel.
+Remarque
+Une fois le future terminé, le rappel est appelé finalement et indépendamment
+d’autres rappels sur le même future. Le contexte d’exécution spécifié décide
+quand et sur quel thread le rappel est exécuté.
+urlSpec onComplete {
+caseSuccess(lines)=>log(find(lines,"password"))
+caseFailure(t)=>println("An error has occurred: "+
+t.getMessage)
+}
+Thread.sleep(1000)
+...
+20
+
+Rappel : Exemple (5/5)
+Source.fromURL
+val urlSpecurlSpec.onComplete
+urlSpec.complete
+future computation
+main-thread
+find
+log
+callback
+Timeline: urlSpec
+Notez que le rappel n’est pas nécessairement appelé immédiatement après
+que le future est terminé.
+21
+
+Diagramme d’état de future
+La figure ci-dessous montre différents états d’un future en tant que diagramme
+d’état.
+T
+Throwable
+COMPLETEDNOT COMPLETED
+SUCCESS
+FAILURE
+Future state diagram
+22
+
+Diagramme d’état de future
+Explications sur la figure précédente:
+Un future est créé sans aucun rappel associé.
+Ensuite, n’importe quel nombre de rappels , , ,  peut lui être affecté.
+Lorsque le future est terminé, il s’est terminé avec succès ou a échoué.
+Après cela, l’état du future ne change plus et l’enregistrement d’un rappel
+planifie immédiatement son exécution.
+f
+1
+f
+2
+...f
+n
+23
+
+Autres fonctions de rappel
+La méthode onComplete est générale dans le sens où elle permet au client de
+gérer le résultat de à la fois des calculs futures échoués et réussis.
+Une autre fonction de rappel couramment utilisée est foreach qui ne gère que les
+résultats réussis.
+Par exemple:
+urlSpec foreach {
+case lines =>log(find(lines,"telnet"))
+}
+24
+
+Enchaîner les résultats futures
+Les rappels sont utiles, mais ils peuvent rendre le raisonnement sur le flux de
+contrôle difficile lorsque les programmes deviennent plus complexes. Ils
+empêchent également certains modèles de programmation asynchrone.
+Par exemple, nous pourrions avoir besoin d’initier de nouveaux futures basés sur
+un calcul future. Il nous faudrait alors :
+Un mécanisme pour transformer un future à un autre future !
+Est-ce que cela vous rappelle quelque chose?
+25
+
+Enchaîner les résultats futures : Exemple
+Supposons que nous ayons une API pour interfacer avec un service d’échange de
+devise. Nous voulons acheter des dollars américains, mais uniquement lorsque
+c’est rentable.
+Ce que nous pouvons faire jusqu’à présent:
+val rateQuote =Future{
+connection.getCurrentValue(USD)
+}
+val purchase =???// Ici, nous avons besoin d'un mécanisme pour 
+// dire qu'une fois le future rateQuote terminé,
+// nous voulons démarrer un autre future, purchase, 
+// qui décide d'acheter uniquement s'il est rentable, 
+// puis envoyer une demande.
+26
+
+Enchaîner les résultats futures : utilisant le
+rappel
+D’abord, essayons le mécanisme de rappel
+val rateQuote =Future{
+connection.getCurrentValue(USD)
+}
+rateQuote onComplete {
+caseSuccess(value)=>val purchase =Future{
+ifisProfitable(quote)then connection.buy(amount, quote)
+elsethrownewException("not profitable")
+}
+purchase onComplete {
+caseSuccess(value)=>println("Purchased "+ value +" USD")
+caseFailure(e1)=>println("An error occurred: "+ e1.getMessage)
+}
+caseFailure(e2)=>println("An error occurred: "+ e2.getMessage)
+}
+27
+
+Pourquoi ce n’est pas une bonne solution
+Cela fonctionne, mais n’est pas pratique pour deux raisons:
+Nous devons utiliser onComplete et y imbriquer le deuxième futur purchase.
+Imaginez qu’une fois l’achat terminé, nous voulons vendre une autre devise.
+Nous aurions à répéter ce modèle dans le rappel onComplete, ce qui rendrait
+le code trop imbriqué, volumineux et difficile à raisonner.
+Le futur purchase n’est pas dans la portée du reste du code. Il ne peut être
+exécuté qu’à partir du rappel onComplete. Cela signifie que d’autres parties
+de l’application ne voient pas ce futur et ne peuvent pas enregistrer un autre
+rappel, par exemple, pour vendre une autre devise.
+28
+
+Composition fonctionnelle
+Nous pouvons utiliser le combinateur map de Future pour prendre le résultat du
+premier Future et appliquer une fonction pour décider si elle est rentable puis
+générer un nouveau Future:
+val rateQuote =Future{
+connection.getCurrentValue(USD)
+}
+val purchase = rateQuote map { quote =>
+ifisProfitable(quote)then connection.buy(amount, quote)
+elsethrownewException("not profitable")
+}
+purchase onComplete {
+caseSuccess(value)=>println("Purchased "+ value +" USD")
+caseFailure(t)=>println("An error occurred: "+ t.getMessage)
+}
+29
+
+map sur Future
+Les futures fournissent des combinateurs (map, flatMap et filter) qui permettre
+une composition simple.
+La méthode map mappe la valeur dans un future à une valeur dans un autre future:
+Cette méthode n’est pas bloquante: elle retourne l’objet Future[S]
+immédiatement. Une fois le future d’origine terminé avec une valeur x, l’objet
+Future[S] retourné est finalement complété par f(x).
+Vous pouvez raisonner sur le map des futurs de la même manière que vous
+raisonnez sur le map des collections.
+def map [S](f: T => S)(e implicite: ExecutionContext):Future[S]
+30
+
+Comment fonctionne le map sur Future?
+Si le Future d’origine a terminé avec succès, alors le Future retourné est
+complété avec une valeur mappée du Future d’origine.
+Si la fonction de mappage lève une exception, le Future est terminé avec cette
+exception.
+Si le Future d’origine échoue avec une exception, le Future retourné contient
+également la même exception. Cette sémantique de propagation d’exception
+est également présente dans le reste des combinateurs.
+31
+
+For comprehensions
+L’un des objectifs de la conception des Futures était de permettre leur utilisation
+dans les for comprehensions. Pour cette raison, les Futures ont également le
+flatMap et les combinateurs withFilter.
+La méthode flatMap prend une fonction qui mappe la valeur à un nouveau future
+g, puis retourne un future qui est terminé une fois que g est terminé.
+Exemple: Supposons que nous voulons échanger des dollars américains contre
+des francs suisses (CHF).
+Nous devons obtenir des cotations pour les deux devises,
+puis décider sur l’achat basé sur les deux cotations.
+32
+
+For comprehensions
+Attention: Le future purchase est completé seulement quand usdQuote et
+chfQuote sont tous les deux complétés – ici cela dépend des valeurs de ces deux
+Futures donc son calcul ne peut pas commencer plus tôt.
+val usdQuote =Future{ connection.getCurrentValue(USD)}
+val chfQuote =Future{ connection.getCurrentValue(CHF)}
+val purchase =for{
+usd <- usdQuote
+chf <- chfQuote
+ifisProfitable(usd, chf)
+}yield connection.buy(amount, chf)
+purchase foreach { _ =>
+println("Purchased "+ amount +" CHF")
+}
+33
+
+Traduction de for comprehensions
+On a déjà vu, les for comprehensions sont traduites en utilisant les combinateurs
+map, flatMap et withFilter correspondants.
+Voici la traduction de la for comprehension dans notre dernier exemple:
+val purchase = usdQuote flatMap { usd =>
+chfQuote
+.withFilter(chf =>isProfitable(usd, chf))
+.map(chf => connection.buy(amount, chf))
+}
+34
+
+flatMap sur Future
+Le combinateur flatMap utilise le future actuel avec le type Future[T] pour
+produire un autre future avec le type Future[S].
+Le Future[S] résultant est complété en prenant la valeur x du type T du future
+actuel, et le mappage de cette valeur à un autre future f(x).
+Alors que le Future résultant d’une méthode map se termine lorsque la
+fonction de mappage f est terminée, le Future résultant d’un flatMap se
+termine lorsqu’à la fois f et le Future retourné par f sont achevés.
+def flatMap [S](f: T =>Future[S])(implicit e: ExecutionContext):Future[S]
+35
+
+Quiz
+Dans l’exemple ci-dessous, Quels sont les
+types des variables a, b, et c?
+deff(x:Int)=Future{
+println(s"creating future number $x")
+nextInt(1000)
+}
+val first =f(1)
+val second =f(2)
+val a =for{
+b <- first
+c <- second
+}yield(b * c)
+Future[Unit], Int,
+Future[Int]
+A
+Future[Int], Future[Int],
+Future[Int]
+B
+Future[Int], Int, IntC
+Int, Unit, UnitD
+Répond à la question 2 sur https://etc.ch/2XRK
+36
+
+Gérer les échecs
+Comment gérer un Future complété par une failure ?
+Les méthodes map et flatMap ont l’inconvénient qu’on ne peut pas gérer l’échec.
+Regardons de nouveau les signatures de ces deux méthodes:
+def map [S](f: T => S)(implicit e: ExecutionContext):Future[S]
+def flatMap [S](f: T =>Future[S])(implicit e: ExecutionContext):Future[S]
+37
+
+Rappel : les méthode map et flatMap
+La fonction f passée en paramètre est de type:
+T => S dans le cas de map, et
+T => Future[S] dans le cas de flatMap.
+Dans les deux cas, f permet seulement de transformer un type d’entré T. T est le
+type de résultat réussi du premier future. C.à.d f ne permet pas d’agir en fonction
+de Success et Failure.
+Si on veut avoir la possibilité de gérer aussi le cas d’échec, on a besoin des
+méthodes qui prennent une foncion avec un type d’entré Try[T] et non T.
+Les méthodes transform et transformWith ont été mis en place avec ce but.
+38
+
+Les méthodes transform et transformWith
+Les méthodes transform et transformWith sont des homologues de map et
+flatMap, avec la différence qu’elles permettent aussi de gérer les cas d’échec.
+Voici leurs signatures:
+Comme attendu, le type de f est:
+Dans transform, Try[T] => Try[S], au lieu de T => S
+Dans transformWith, Try[T] => Future[S], au lieu de T => Future[S]
+def transform[S](f: Try[T]=> Try[S])(implicit executor: ExecutionContext):Future[S]
+def transformWith[S](f: Try[T]=>Future[S])(implicit executor: ExecutionContext):Future[S]
+39
+
+La méthode transform
+La méthode transform permet de transformer un future de manière suivante:
+Avec une fonction qui accepte une valeur Try en entrée, on peut gérer à la fois
+un Future complété avec succès et un Future complété avec une exception.
+De plus, la fonction passé en paramètre renvoie une autre valeur Try, ce qui
+signifie que nous pouvons décider de:
+retourner un succès, ou
+retourner un échec
+40
+
+La méthode transform (suite)
+Voici un exemple de code avec transform:
+future{...}
+.transform {
+caseSuccess(result)=>
+...// calculate something based on result
+Try(something)
+caseFailure(error)=>
+// either reflect the failed result with Failure(error)
+Failure(error)
+// or do something else
+Try(somethingElse)
+// the result can be either a Success or a raised exception
+}
+41
+
+La méthode transformWith
+La méthode transformWith est similaire à la fonction transform, sauf la fonction
+qui lui est passée en paramètre renvoie un nouveau Future au lieu d’un Try.
+def transformWith[S](f: Try[T]=>Future[S])(implicit executor: ExecutionContext):Future[S]
+42
+
+La méthode transformWith (suite)
+Voici un exemple de code avec transformWith:
+future{...}
+.transformWith {
+caseSuccess(result)=>
+...// calculate something based on result
+Future(something)
+caseFailure(error)=>
+// either reflect the failed result with Future.failed(error)
+Future.failed(error)
+// or do something else asynchronously that can fail or succeed
+Future(somethingElse)
+}
+43
+
+Les méthodes recover et recoverWith
+Il est aussi possible de seulement s’intéresser au cas d’échec d’un future et agir
+en fonction.
+Les méthodes recover et recoverWith ont ce but.
+Voici leurs signatures:
+Note: La fonction qu’on fourni à recover et recoverWith est une .
+def recover[U >: T](pf:PartialFunction[Throwable, U])
+(implicit executor: ExecutionContext):Future[U]
+def recoverWith[U >: T](pf:PartialFunction[Throwable,Future[U]])
+(implicit executor: ExecutionContext):Future[U]
+fonction partielle
+44
+
+La méthode recover
+La méthode recover permet de transformer le future en un nouveau future. Celle-
+ci va:
+gérer les exceptions qui correspondent à la fonction partielle pf.
+s’il n’y a pas de match, ou si le future termine avec succès, le nouveau future
+va contenir les même résultats.
+Exemple:
+Future(6/0) recover {case e:ArithmeticException=>0}// result: 0
+Future(6/0) recover {case e:IOException=>0}// result: ArithmeticException
+Future(6/2) recover {case e:ArithmeticException=>0}// result: 3
+45
+
+La méthode recoverWith
+La méthode recoverWith créer un nouveau future. Celui-ci va:
+gérer les exceptions qui correspondent à la fonction partielle pf, en lui
+attribuant une valeur d’une autre future.
+s’il n’y a pas de match ou si le future termine avec succès, le nouveau future va
+contenir les même résultats.
+val f =Future{Int.MaxValue }
+Future(6/0) recoverWith {case e:ArithmeticException=> f }
+// result: Future(Success(Int.MaxValue))
+46
+
+Autres combinateurs
+Les Futures viennent avec d’autres combinateurs tels que filter, fallbackTo,
+ou zip, mais nous ne les couvrons pas ici.
+La compréhension des combinateurs de base vous sera utile pour apprendre les
+autres méthodes.
+Si vous souhaitez, vous pouvez étudier les combinateurs restants dans la
+documentation de l’API : https://dotty.epfl.ch/api/scala/concurrent/Future.html
+47
+
+Références
+Learning Concurrent Programming in Scala Second Edition,
+Aleksandar Prokopec, Packt Publishing, February 22, 2017.
+Futures, Scala documentation: https://docs.scala-
+lang.org/overviews/core/futures.html
+48
+
+
+
+### Fichier 3 (C:\Users\boris\Documents\Etudes\S6\TB\tb-app\tmp\25-16-TypeDirectedProgramming.pdf):
+
+
+
+Programmation AppliquéeProgrammation Appliquée
+Programmation AppliquéeProgrammation Appliquée
+Programmation Appliquée
+Programmation Appliquée
+Programmation AppliquéeProgrammation AppliquéeProgrammation Appliquée
+en Scalaen Scala
+en Scalaen Scala
+en Scala
+en Scala
+en Scalaen Scalaen Scala
+Types and Type Directed ProgrammingTypes and Type Directed Programming
+Types and Type Directed ProgrammingTypes and Type Directed Programming
+Types and Type Directed Programming
+Types and Type Directed Programming
+Types and Type Directed ProgrammingTypes and Type Directed ProgrammingTypes and Type Directed Programming
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran FatemiProf. Nastaran Fatemi
+Christopher MeierChristopher Meier
+Christopher MeierChristopher Meier
+Christopher Meier
+Christopher Meier
+Christopher MeierChristopher MeierChristopher Meier
+Printemps 2025Printemps 2025
+Printemps 2025Printemps 2025
+Printemps 2025
+Printemps 2025
+Printemps 2025Printemps 2025Printemps 2025
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur Répondre à tous les quiz sur 
+https://etc.ch/u5aYhttps://etc.ch/u5aY
+https://etc.ch/u5aYhttps://etc.ch/u5aY
+https://etc.ch/u5aY
+https://etc.ch/u5aY
+https://etc.ch/u5aYhttps://etc.ch/u5aYhttps://etc.ch/u5aY
+1
+
+In this course
+Intersection and Union types
+Variance
+Type Bounds
+2
+
+More safety with Union and Intersection types
+In Scala 3, the type system was enhanced with two new features:
+Intersection types: (A & B)
+Union types: (A | B)
+These feautures allow developers to precisely describe values that conform to
+multiple types simultaneously, or one of several possible types.
+In the following slides, we discover them in more details.
+3
+
+Intersection Types
+Used on types, the & operator creates an intersection type.
+The type S & T represents values that are of the type S and T at the same time.
+The members of an intersection type A & B are all the members of A and all the
+members of B.
+Intersection types are commutative: A & B is the same type as B & A.
+4
+
+Intersection Types : Example
+Example: Take the traits Resettable, and Growable[A]. Here we want the
+function f to use the methods defined in both of these traits:
+trait Resettable:
+defreset():Unit
+trait Growable[A]:
+defadd(a: A):Unit
+//We define f with the parameter `x` of type `Resettable & Growable[String]`
+//x is therefore required to be both a `Resettable` and a `Growable[String]`.
+deff(x: Resettable & Growable[String]):Unit=
+x.reset()
+x.add("first")
+5
+
+Intersection Types : Example (ctd.)
+Intersection types can be useful to describe requirements structurally.
+That is, in our example f, we directly express that we are happy with any value
+for x as long as it’s a subtype of both Resettable and Growable.
+We did not have to create a nominal helper trait like the following:
+Note that there is also an important difference between these two alternatives:
+With the intersection type, any value that happens to be both Resettable and
+Growable[String] can be passed to f.
+With the explicit extension type, only values that explicitly extend the trait
+Both[String] can be passed.
+trait Both[A]extends Resettable, Growable[A]
+deff(x: Both[String]):Unit
+6
+
+Union Types
+Used on types, the | operator creates a so-called union type.
+The type A | B represents values that are either of the type A or of the type B.
+A union type A | B includes all values of both types.
+Like intersection types, union types are commutative: A | B is equivalent to B |
+A.
+Dually to intersection types, a union type is a supertype of all combinations of its
+constituent types.
+For example, A | B is a supertype of both A and B.
+A | B is not just a supertype of both A and B, but their nearest common
+supertype, or least upper bound.
+7
+
+A mathemnatical lattice
+The addition of union and intersection types to Scala 3 ensures that Scala’s type
+system forms a mathematical lattice.
+A lattice is a partial order in which any two types have both a unique least upper
+bound, or LUB, and a unique greatest lower bound.
+The least upper bound of any two types is their union
+The greatest lower bound is their intersection.
+8
+
+Least upper and greatest lower bounds
+Take the following example hierarchy:
+The least upper bound of Plum and Apricot :
+Plum | Apricot
+The greatest lower bound of Plum and Apricot:
+Plum & Apricot
+trait Fruit
+trait Plum extends Fruit
+trait Apricot extends Fruit
+trait Pluot extends Plum, Apricot
+9
+
+Implication of Union Types on type inference
+Whereas in Scala 2, the type inference algorithm had to settle on an
+approximation of the least upper bound of some pairs of types, Scala 3 can simply
+form a union of those types.
+Example:
+val plumOrApricot: Plum | Apricot =new Plum {}
+// This compiles fine, because Plum | Apricot <: Fruit
+val fruit: Fruit = plumOrApricot
+// But you cannot use a Fruit where Plum | Apricot is needed
+scala>val doesNotCompile: Plum | Apricot = fruit
+10
+
+Type inference on Union Types : Example
+To access members of a union type, you must perform a pattern match to
+determine the actual class of the value at runtime.
+Example: here, the help method accepts a parameter named id of the union type
+Username | Password, that can be either a Username or a Password:
+caseclassUsername(name:String)
+caseclassPassword(hash: Hash)
+defhelp(id: Username | Password)=
+val user = id match
+caseUsername(name)=>lookupName(name)
+casePassword(hash)=>lookupPassword(hash)
+// more code here ...
+11
+
+Type inference on Union Types : Example
+(ctd.)
+This code is a flexible and type-safe solution. If you attempt to pass in a type other
+than a Username or Password, the compiler flags it as an error:
+You’ll also get an error if you attempt to add a case to the match expression that
+doesn’t match the Username or Password types:
+help("hi")// error: Found: ("hi" : String) Required: Username | Password
+case1.0=>???// ERROR: this line won’t compile
+12
+
+Alternative to Union types
+As shown, union types can be used to represent alternatives of several different
+types, without requiring those types to be part of a custom-cra ed class
+hierarchy, or requiring explicit wrapping. Without union types, it would require
+pre-planning of the class hierarchy.
+Example:
+Pre-planning does not scale very well, as requirements of API users might not
+be foreseeable. Also, cluttering the type hierarchy with marker traits like
+UsernameOrPassword makes the code more difficult to read.
+trait UsernameOrPassword
+caseclassUsername(name:String)extends UsernameOrPassword
+caseclassPassword(hash: Hash)extends UsernameOrPassword
+defhelp(id: UsernameOrPassword)=...
+13
+
+Union and Intersection Types : Conclusion
+As a a conclusion, Union and Intersection Types simplify code, improve pattern
+matching, and reduce boilerplate in many use cases like function parameters,
+type constraints, and more.
+14
+
+Quiz
+What is the inferred type of guess?
+defguess(l1:List[Int], n:Int)= n match
+case0=> l1.foldLeft(List[Int]())((x, y)=> x :+ y)
+case x if x >0=> l1.map(_ *2.0).reduceLeft((y, z)=> y * n - z)
+case _ => Nil
+Any
+A
+List[Int] | Double
+B
+List[Any]
+C
+List[Nothing] | Any
+D
+Some other typeE
+Répond à la question 1 sur https://etc.ch/u5aY
+15
+
+Polymorphism
+There are two principal forms of polymorphism:
+Subtyping
+Generics
+In this part, we will look at their interactions.
+We will particularly study:
+Type bound
+Variance
+16
+
+Example of IntSet Class
+We use the example of an IntSet class, which implements a set of Integers as a
+binary tree, with two possible types of trees:
+A tree for the empty set : Empty
+A tree consisting of an integer and two sub-trees : NonEmpty
+abstractclass IntSet:
+defincl(x:Int): IntSet
+ def contains(x:Int):Boolean
+Object Empty extends IntSet:
+defcontains(x:Int):Boolean=false
+defincl(x:Int): IntSet =NonEmpty(x, Empty, Empty)
+17
+
+Example of IntSet Class (ctd.)
+classNonEmpty(elem:Int, left: IntSet, right: IntSet)extends IntSet:
+defcontains(x:Int):Boolean=
+if x < elem then left.contains(x)
+elseif x > elem then right.contains(x)
+elsetrue
+defincl(x:Int): IntSet =
+if x < elem thenNonEmpty(elem, left.incl(x), right)
+elseif x > elem thenNonEmpty(elem, left, right.incl(x))
+elsethis
+end NonEmpty
+18
+
+Quiz
+Consider the method assertAllPos which
+takes an IntSet (Empty sets or NonEmpty sets)
+returns the NonEmpty set if all its elements are positive, returns Empty if the
+input is Empty.
+throws an exception otherwise
+What would be the best type you can give to assertAllPos?
+defassertAllPos(s: IntSet):?
+NonEmpty
+A
+IntSet
+B
+Nothing
+C
+Some other typeD
+Répond à la question 2 sur https://etc.ch/u5aY
+19
+
+Type Bounds
+To express that assertAllPos takes
+Empty sets to Empty sets, and
+NonEmpty sets to NonEmpty sets:
+Here, “<: IntSet” is an upper bound of the type parameter S:
+It means that S can be instantiated only to types that conform to IntSet.
+Generally, the notation
+S <: T means: S is a subtype of T, and
+S >: T means: S is a supertype of T, or T is a subtype of S.
+def assertAllPos[S <: IntSet](r: S): S =...
+20
+
+Lower Bounds
+You can also use a lower bound for a type variable.
+example
+introduces a type parameter S that can range only over supertypes of NonEmpty.
+So S could be one of NonEmpty, IntSet, AnyRef, or Any.
+We will see later where lower bounds are useful.
+[S >: NonEmpty]
+21
+
+Mixed Bounds
+Finally, it is also possible to mix a lower bound with an upper bound.
+For instance,
+would restrict S any type on the interval between NonEmpty and IntSet.
+[S >: NonEmpty <: IntSet]
+22
+
+Covariance
+There’s another interaction between subtyping and type parameters we need to
+consider. Given:
+is
+Intuitively, this makes sense: A list of non-empty sets is a special case of a list of
+arbitrary sets.
+We call types for which this relationship holds covariant because their subtyping
+relationship varies with the type parameter.
+Does covariance make sense for all types, not just for List?
+NonEmpty <: IntSet
+List[NonEmpty]<:List[IntSet]?
+23
+
+Arrays
+For perspective, let’s look at arrays in Java (and C#).
+Reminder:
+An array of T elements is written T[] in Java.
+In Scala we use parameterized type syntax Array[T] to refer to the same type.
+Arrays in Java are covariant, so one would have:
+NonEmpty[]<: IntSet[]
+24
+
+Array Typing Problem
+But covariant array typing causes problems.
+To see why, consider the Java code below.
+It looks like we assigned in the last line an Empty set to a variable of type
+NonEmpty!
+What went wrong?
+NonEmpty[] a =new NonEmpty[]{
+newNonEmpty(1,newEmpty(),newEmpty())};
+IntSet[] b = a;
+b[0]=newEmpty();
+NonEmpty s = a[0];
+25
+
+The Liskov Substitution Principle
+The following principle, stated by Barbara Liskov, tells us when a type can be a
+subtype of another.
+If A <: B, then everything one can to do with a value of type B one should also
+be able to do with a value of type A.
+The actual definition Liskov used is a bit more formal. It says:
+Let q(x) be a property provable about objects x of type B. Then q(y) should be
+provable for objects y of type A where A <: B.
+26
+
+Exercise
+The problematic array example would be written as follows in Scala:
+When you try out this example, what do you observe?
+val a:Array[NonEmpty]=Array(NonEmpty(1, Empty, Empty))
+val b:Array[IntSet]= a
+b(0)= Empty
+val s: NonEmpty =a(0)
+A type error in line 1A
+A type error in line 2B
+A type error in line 3C
+A type error in line 4D
+A program that compiles and throws an exception at run-timeE
+A program that compiles and runs without exceptionF
+Répond à la question 3 sur https://etc.ch/u5aY
+27
+
+Variance in Scala
+Say C[T] is a parameterized type and A, B are types such that A <: B.
+The possible relationships between C[A] and C[B] are:
+C[A] <: C[B] => C is covariant
+C[A] >: C[B] => C is contravariant
+Neither C[A] nor C[B] is a subtype of the other
+=> C is nonvariant
+Scala lets you declare the variance of a type by annotating the type parameter:
+class C[+A]{...}// C is covariant
+class C[-A]{...}// C is contravariant
+class C[A]{...}// C is nonvariant
+28
+
+Quiz
+Assume the following type hierarchy and two function types:
+According to the Liskov Substitution Principle, which of the following should be
+true?
+trait Fruit
+class Apple extends Fruit
+class Orange extends Fruit
+type FtoO = Fruit => Orange
+type AtoF = Apple => Fruit
+FtoO <: AtoFA
+AtoF <: FtoOB
+FtoO and AtoF are unrelated.C
+Répond à la question 4 sur https://etc.ch/u5aY
+29
+
+Typing Rules for Functions
+Generally, we have the following rule for subtyping between function types:
+If A2 <: A1 and B1 <: B2, then
+So functions are contravariant in their argument type(s) and covariant in their
+result type.
+This leads to the following definition of the Function1 trait:
+A1 => B1  <:  A2 => B2
+package scala
+trait Function1[-T,+U]:
+defapply(x: T): U
+30
+
+Variance Checks
+The Scala compiler will check that there are no problematic combinations when
+compiling a class with variance annotations.
+Roughly,
+covariant type parameters can only appear in method results.
+contravariant type parameters can only appear in method parameters.
+invariant type parameters can appear anywhere.
+The precise rules are a bit more involved, fortunately the Scala compiler performs
+them for us.
+31
+
+Variance-Checking the Function Trait
+Let’s have a look again at Function1:
+Here,
+T is contravariant and appears only as a method parameter type
+U is covariant and appears only as a method result type
+So the method is checks out OK.
+trait Function1[-T,+U]:
+defapply(x: T): U
+32
+
+Making Classes Covariant
+Sometimes, we have to put in a bit of work to make a class covariant.
+Consider the trait List whose definition is simplified as follows:
+traitList[+T]:
+def isEmpty =thismatch
+case Nil =>true
+case=>false
+overridedef toString =...
+caseclass::[+T](head: T, tail:List[T])extendsList[T]
+caseobject Nil extendsList[Nothing]
+33
+
+Making Classes Covariant (ctd.)
+Consider adding a prepend method to List which prepends a given element,
+yielding a new list.
+A first implementation of prepend could look like this:
+But that does not work!
+traitList[+T]:
+defprepend(elem: T):List[T]=::(elem,this)
+34
+
+Quiz
+Why does the following code not type-check?
+Possible answers:
+traitList[+T]:
+defprepend(elem: T):List[T]=::(elem,this)
+prepend turns List into a mutable class.
+A
+prepend fails variance checking.
+B
+prepend’s right-hand side contains a type error.
+C
+Répond à la question 5 sur https://etc.ch/u5aY
+35
+
+Prepend Violates LSP
+Indeed, the compiler is right to throw out List with prepend, because it violates
+the Liskov Substitution Principle:
+Here’s something one can do with a list xs of type List[Fruit]:
+But the same operation on a list ys of type List[Apple] would lead to a type
+error:
+xs.prepend(Orange)
+ys.prepend(Orange)
+^type mismatch
+required: Apple
+found   : Orange
+36
+
+Lower Bounds
+But prepend is a natural method to have on immutable lists!
+Q: How can we make it variance-correct?
+We can use a lower bound:
+This passes variance checks, because:
+covariant type parameters may appear in lower bounds of method type
+parameters
+contravariant type parameters may appear in upper bounds.
+def prepend [U >: T](elem: U):List[U]=::(elem,this)
+37
+
+Quiz
+Assume prepend in trait List is implemented like this:
+What is the result type of this function:
+Possible answers:
+def prepend [U >: T](elem: U):List[U]=::(elem,this)
+deff(xs:List[Apple], x: Orange)= xs.prepend(x)?
+does not type checkA
+List[Apple]
+B
+List[Orange]
+C
+List[Fruit]
+D
+List[Any]
+E
+Répond à la question 6 sur https://etc.ch/u5aY
+38
+
+References
+Coursera course “Functional Programming Principles in Scala”, Odersky, M.
+Odersky, M., Spoon, L., & Venners, B. (2021). Programming in Scala (5th ed.).
+Artima Press. ISBN: 978-0-989-77450-1.
+Scala documentation on https://docs.scala-lang.org/
+39
+
+
+
+### Fichier 4 (C:\Users\boris\Documents\Etudes\S6\TB\tb-app\tmp\25-17-ContextualAbstractions.pdf):
+
+
+
+Programmation AppliquéeProgrammation Appliquée
+Programmation AppliquéeProgrammation Appliquée
+Programmation Appliquée
+Programmation Appliquée
+Programmation AppliquéeProgrammation AppliquéeProgrammation Appliquée
+en Scalaen Scala
+en Scalaen Scala
+en Scala
+en Scala
+en Scalaen Scalaen Scala
+Contextual AbstractionsContextual Abstractions
+Contextual AbstractionsContextual Abstractions
+Contextual Abstractions
+Contextual Abstractions
+Contextual AbstractionsContextual AbstractionsContextual Abstractions
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran Fatemi
+Prof. Nastaran FatemiProf. Nastaran FatemiProf. Nastaran Fatemi
+Christopher MeierChristopher Meier
+Christopher MeierChristopher Meier
+Christopher Meier
+Christopher Meier
+Christopher MeierChristopher MeierChristopher Meier
+Printemps 2025Printemps 2025
+Printemps 2025Printemps 2025
+Printemps 2025
+Printemps 2025
+Printemps 2025Printemps 2025Printemps 2025
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur 
+Répondre à tous les quiz sur Répondre à tous les quiz sur Répondre à tous les quiz sur 
+https://etc.ch/tAsShttps://etc.ch/tAsS
+https://etc.ch/tAsShttps://etc.ch/tAsS
+https://etc.ch/tAsS
+https://etc.ch/tAsS
+https://etc.ch/tAsShttps://etc.ch/tAsShttps://etc.ch/tAsS
+1
+
+Contextual Abstraction
+In this part, we study contextual abstraction, what it is, and how it is supported in
+Scala.
+The word “context” is formed from :
+con, which in Latin means with, and
+text.
+It means what comes with the text but is not in the text.
+It’s a very general concept which in fact comes in many forms.
+2
+
+Context Takes Many Forms
+the current configuration
+the current scope
+the meaning of “<” on this type
+the user on behalf of which the operation is performed
+the security level in effect
+...
+Code becomes more modular if it can abstract over context.
+That is, functions and classes can be written without knowing in detail the context
+in which they will be called or instantiated.
+3
+
+How Is Context Represented?
+So far:
+global values
+i.e., no abstraction - this is o en too rigid
+global mutable variables
+what if different modules need different settings? interference can be
+dangerous!
+“Monkey Patching”
+you “patch” existing code (like adding a new method or changing
+behavior) while the program is running.
+breaks encapsulation and can lead to hard-to-debug errors
+dependency injection frameworks (e.g. Spring)
+outside the language, rely on bytecode rewriting → harder to understand
+and debug.
+4
+
+Functional Context Representation
+In functional programming, the natural way to abstract over context is with
+function parameters.
+Advantages:
+flexible
+types are checked
+not relying on side effects
+Disadvantages:
+many function arguments
+which hardly ever change
+repetitive, errors are hard to spot
+5
+
+Example: Sorting
+You have known sort functions.
+For instance, here’s an outline of a method sort that takes as parameter a
+List[Int] and returns another List[Int] containing the same elements, but
+sorted:
+At some point, this method has to compare two elements x and y of the given list.
+defsort(xs:List[Int]):List[Int]=
+...
+...if x < y then...
+...
+6
+
+Making sort More General
+Problem: How to parameterize sort so that it can also be used for lists with
+elements other than Int, such as Double or String?
+A straightforward approach would be to use a polymorphic type T for the type of
+elements:
+But this does not work, because there’s not a single comparison method < that
+works for all types.
+In other words, we need to ask the question:
+What is the meaning of < on type T at the call site?
+This means querying the call-site context.
+def sort[T](xs:List[T]):List[T]=...
+7
+
+Parameterization of sort
+The most flexible design is to pass the comparison operation as an additional
+parameter:
+def sort[T](xs:List[T])(lessThan:(T, T)=>Boolean):List[T]=
+...
+...iflessThan(x, y)then...
+...
+8
+
+Parameterization of sort: example
+Take the insertion sort given below, and replace the Int type with a generic type
+T.
+defsort(xs:List[Int]):List[Int]=
+definsert(x:Int, sorted:List[Int]):List[Int]= sorted match
+case Nil =>List(x)
+case y :: ys =>
+if x < y then x :: sorted
+else y ::insert(x, ys)
+xs match
+case Nil => Nil
+case x :: rest =>insert(x,sort(rest))
+9
+
+Calling Parameterized sort
+We can now call sort as follows:
+val ints =List(-5,6,3,2,7)
+val strings =List("apple","pear","orange","pineapple")
+sort(ints)((x, y)=> x < y)
+sort(strings)((s1, s2)=> s1.compareTo(s2)<0)
+10
+
+Parameterization with Ordering
+There is already a class in the standard library that represents orderings:
+Provides ways to compare elements of type A.
+So, instead of parameterizing with the lessThan function, we could parameterize
+with Ordering instead:
+scala.math.Ordering[A]
+def sort[T](xs:List[T])(ord: Ordering[T]):List[T]=
+...
+...if ord.lt(x, y)then...
+...
+11
+
+Ordering Instances
+Calling the new sort can be done like this:
+This makes use of the values Int and String defined in the scala.math.Ordering
+object, which produce the right orderings on integers and strings.
+import scala.math.Ordering
+sort(ints)(Ordering.Int)
+sort(strings)(Ordering.String)
+object Ordering:
+valInt=new Ordering[Int]:
+defcompare(x:Int, y:Int)=
+if x < y then-1elseif x > y then1else0
+12
+
+Reducing Boilerplate
+Problem: Passing around Ordering arguments is cumbersome.
+Sorting a List[Int] value always uses the same Ordering.Int argument,
+sorting a List[String] value always uses the same Ordering.String argument,
+and so on...
+sort(ints)(Ordering.Int)
+sort(strings)(Ordering.String)
+13
+
+Implicit Parameters
+We can reduce the boilerplate by making ord an implicit parameter:
+Now, ord is an implicit parameter which means that the compiler can synthesize
+the correct arguments that match the ord parameter.
+Then, calls to sort can omit the ord parameter:
+The compiler infers the argument value based on its expected type.
+def sort[T](xs:List[T])(using ord: Ordering[T]):List[T]=...
+sort(ints)
+sort(strings)
+14
+
+Type Inference
+We have seen that the compiler is able to infer types from values.
+That is, the previous calls to sort are augmented as follows:
+sort[Int](ints)
+sort[String](strings)
+15
+
+Term Inference
+The Scala compiler is also able to do the opposite, namely to infer expressions
+(aka terms) from types.
+When there is exactly one “obvious” value for a type, the compiler can provide
+that value to us.
+sort[Int](ints)(using Ordering.Int)
+sort[String](strings)(using Ordering.String)
+16
+
+Using Clauses
+An implicit parameter is introduced by a using parameter clause:
+A matching explicit argument can be passed in a using argument clause:
+But the argument can also be le  out (and it usually is).
+If the argument is missing, the compiler will infer one from the parameter type.
+def sort[T](xs:List[T])(using ord: Ordering[T]):List[T]=...
+sort(strings)(using Ordering.String)
+sort(strings)
+17
+
+Using Clauses Syntax Reference
+Multiple parameters can be in a using clause:
+Or, there can be several using clauses in a row:
+using clauses can also be freely mixed with regular parameters:
+deff(x:Int)(using a: A, b: B)=...
+f(x)(using a, b)
+deff(x:Int)(using a: A)(using b: B)=...
+deff(x:Int)(using a: A)(y:Boolean)(using b: B)=...
+f(x)(using a)(y)(using b)
+18
+
+Anonymous Using Clauses
+Parameters of a using clause can be anonymous:
+This is useful if the body of sort does not mention ord at all, but simply passes it
+on as an implicit argument to further methods.
+def sort[T](xs:List[T])(using Ordering[T]):List[T]=
+...
+...merge(sort(fst),sort(snd))
+def merge[T](xs:List[T], ys:List[T])(using Ordering[T]):List[T]=...
+19
+
+Anonymous Using Clauses
+Here we have the analogous code, where the parameter names are put back and
+the arguments are made explicit.
+You see that the only use of the ord parameter is to pass it on to the merge method
+that does the actual comparisons. That is why we could eliminate ord on the
+previous slide.
+def sort[T](xs:List[T])(using ord: Ordering[T]):List[T]=
+...
+...merge(sort(fst),sort(snd))(using ord)
+def merge[T](xs:List[T])(using ord: Ordering[T]):List[T]=...
+20
+
+Context Bounds
+This pattern where you have a type parameter T and then a using clause that uses
+T in some trait like ordering is quite common. Sometimes one can go further and
+replace the using clause with a context bound for a type parameter.
+Instead of:
+With a context bound:
+We have essentially a constraint that says there must be an instance for ordering
+that is defined on T.
+def printSorted[T](as:List[T])(using Ordering[T])=
+println(sort(as))
+def printSorted[T: Ordering](as:List[T])=
+println(sort(as))
+21
+
+Context Bounds
+More generally, a method definition such as:
+is expanded to:
+deff[T:U
+1
+...:U
+n
+](ps):R=...
+deff[T](ps)(usingU
+1
+[T],...,U
+n
+[T]):R=...
+22
+
+Given Instances
+We saw previously that the parameter in the using clause, such as, (using
+Ordering[Int]), gets instantiated with Ordering.Int. For this to work, that
+Ordering.Int must be a given instance:
+This code defines a given instance of type Ordering[Int], named Int.
+object Ordering:
+given Int: Ordering[Int]with
+defcompare(x:Int, y:Int):Int=
+if x < y then-1elseif x > y then1else0
+23
+
+Anonymous Given Instances
+Given instances can be anonymous. Just omit the instance name:
+The compiler will synthesize a name for an anonymous instance:
+given Ordering[Double]with
+defcompare(x:Int, y:Int):Int=...
+given given_Ordering_Double: Ordering[Double]with
+defcompare(x:Int, y:Int):Int=...
+24
+
+Summoning an Instance
+One can refer to a (named or anonymous) instance by its type:
+These expand to:
+summon is a predefined method. It can be defined like this:
+summon[Ordering[Int]]
+summon[Ordering[Double]]
+Ordering.Int
+Ordering.given_Ordering_Double
+def summon[T](using x: T)= x
+25
+
+Implicit Parameter Resolution
+Say, a function takes an implicit parameter of type T.
+The compiler will search a given instance that:
+has a type compatible with T,
+is visible at the point of the function call, or is defined in a companion object
+associated with T.
+If there is a single (most specific) instance, it will be taken as actual arguments for
+the inferred parameter.
+Otherwise it’s an error.
+26
+
+Given Instances Search Scope
+The search for a given instance of type T includes:
+all the given instances that are visible (inherited, imported, or defined in an
+enclosing scope),
+the given instances found in a companion object associated with T.
+The definition of associated is quite general. Besides the companion object of a
+class itself, the compiler will also consider
+companion objects associated with any of T’s super classes/traits
+companion objects associated with any type argument in T
+if T is an inner class, the outer objects in which it is embedded.
+27
+
+Companion Objects Associated With a Queried
+Type
+If the compiler does not find a given instance matching the queried type T in the
+lexical scope, it continues searching in the companion objects associated with T.
+Consider the following hierarchy:
+If a given instance of type Bar[Y] is required, the compiler will look into the
+companion objects Bar, Y, Foo, and X (but not Baz).
+trait Foo[T]
+trait Bar[T]extends Foo[T]
+trait Baz[T]extends Bar[T]
+trait X
+trait Y extends X
+28
+
+Importing Given Instances
+Since given instances can be anonymous, how can they be imported?
+In fact, there are three ways to import a given instance.
+1. By Name
+2. By Type
+3. With a Wildcard
+Since the names of givens don’t really matter, the second form of import is
+preferred since it is most informative.
+import scala.math.Ordering.Int
+import scala.math.Ordering.{given Ordering[Int]}
+import scala.math.Ordering.{given Ordering[?]}
+import scala.math.given
+29
+
+No Given Instance Found
+If there is no available given instance matching the queried type, an error is
+reported:
+scala>deff(using n:Int)=()
+scala> f
+^
+error: no implicit argument of typeInt was found for parameter n of method f
+30
+
+Ambiguous Given Instances
+If more than one given instance is eligible, an ambiguity is reported:
+trait C:
+val x:Int
+given c1: C with
+val x =1
+given c2: C with
+val x =2
+deff(using c: C)=()
+f
+^
+error: ambiguous implicit arguments:
+both value c1 and value c2
+matchtype C of parameter c of method f
+31
+
+ Priorrities
+Actually, several given instances matching the same type don’t generate an
+ambiguity if one is more specific than the other.
+In essence, a definition
+is more specific than a definition
+if:
+a is in a closer lexical scope than b, or
+a is defined in a class or object which is a subclass of the class defining b, or
+type A is a generic instance of type B, or
+type A is a subtype of type B.
+given a: A
+given b: B
+32
+
+Priorities: Quiz
+Which given instance is summoned here?
+class A[T](x: T)
+given universal[T](using x: T): A[T](x)
+given specific: A[Int](2)
+summon[A[Int]]
+universal[T](using x: T)
+A
+specific
+B
+It gives an errorC
+Répond à la question 1 sur https://etc.ch/tAsS
+33
+
+Priorities: Quiz
+Which given instance is summoned here?
+trait A:
+given ac: C
+trait B extends A:
+given bc: C
+object O extends B:
+val x = summon[C]
+ac
+A
+bc
+B
+It gives an errorC
+Répond à la question 2 sur https://etc.ch/tAsS
+34
+
+Priorities: Quiz
+Which given instance is summoned here?
+given ac: C
+deff()=
+given b: C
+defg(using c: C)=()
+g
+ac
+A
+b
+B
+It gives an errorC
+Répond à la question 3 sur https://etc.ch/tAsS
+35
+
+Type classes
+Type classes are a particular way of context abstraction, to turn types into values.
+In fact, we have seen the pattern of type classes already:
+trait Ordering[A]:
+defcompare(x: A, y: A):Int
+object Ordering:
+given Ordering[Int]with
+defcompare(x:Int, y:Int)=
+if x < y then-1elseif x > y then1else0
+given Ordering[String]with
+defcompare(s:String, t:String)= s.compareTo(t)
+36
+
+Type classes
+We say that Ordering is a type class.
+In Scala, a type class is a generic trait that comes with given instances for type
+instances of that trait.
+E.g., in the Ordering example, we have given instances for Ordering[Int] and
+Ordering[String]
+37
+
+Type classes
+Type classes provide yet another form of polymorphism:
+The sort method can be called with lists containing elements of any type A for
+which there is a given instance of type Ordering[A].
+At compilation-time, the compiler resolves the specific Ordering implementation
+that matches the type of the list elements.
+Resolving means providing an argument in a using clause that matches this
+Ordering context bound.
+def sort[A: Ordering](xs:List[A]):List[A]=...
+38
+
+Exercice
+Implement an instance of the Ordering typeclass for the Rational type.
+Reminder:
+let , ,
+caseclassRational(num:Int, denom:Int)
+q=
+num
+q
+denom
+q
+r=
+num
+r
+denom
+r
+q<r⇔
+num
+q
+denom
+q
+<
+num
+r
+denom
+r
+⇔num
+q
+×denom
+r
+<num
+r
+×denom
+q
+39
+
+Retroactive Extension
+It is worth noting that we were able to implement the Ordering[Rational]
+instance without changing the Rational class definition.
+Type classes support retroactive extension: the ability to extend a data type with
+new operations without changing the original definition of the data type.
+In this example, we have added the capability of comparing Rational numbers.
+40
+
+Conditional Instances
+Question: How do we define an Ordering instance for lists?
+Observation: This can be done only if the list elements have an ordering.
+The given instance listOrdering takes type parameters and implicit parameters.
+given listOrdering[A](using ord: Ordering[A]): Ordering[List[A]]with
+defcompare(xs:List[A], ys:List[A])=(xs, ys)match
+case(Nil, Nil)=>0
+case(Nil, _)=>-1
+case(_, Nil)=>1
+case(x :: xs1, y :: ys1)=>
+val c = ord.compare(x, y)
+if c !=0then c elsecompare(xs1, ys1)
+41
+
+Conditional Instances
+Given instances such as listOrdering that take implicit parameters are :
+An ordering for lists with elements of type T exists only if there is an ordering
+for T.
+This sort of conditional behavior is best implemented with type classes.
+Normal subtyping and inheritance cannot express this: a class either inherits a
+trait or doesn’t.
+42
+
+Recursive Implicit Resolution
+Given instances with implicit parameters are resolved recursively:
+A given instance for the outer type is constructed first and then its implicit
+parameters are filled in in turn.
+Example:
+def sort[A](xs:List[A])(using Ordering[A]):List[A]=...
+val xss:List[List[Int]]=...
+sort(xss)//the original call
+=> sort[List[Int]](xss)
+//what type inference gives us for the type of element A
+=> sort[List[Int]](xss)(using listOrdering)
+//now we need an odrering for List[Int], we find listOrdering
+=> sort[List[Int]](xss)(using listOrdering(using Ordering.Int))
+//list ordering itself needs ordering for its element type, which is Int
+43
+
+Exercice
+Implement an instance of the Ordering typeclass for pairs of type (A, B), where
+A, B have Ordering instances defined on them.
+Example use case: Consider a program for managing an address book. We would
+like to sort the addresses by zip codes first and then by street name. Two
+addresses with different zip codes are ordered according to their zip code,
+otherwise (when the zip codes are the same) the addresses are sorted by street
+name. E.g.
+type Address =(Int,String)// Zipcode, Street Name
+val xs:List[Address]=...
+sort(xs)
+44
+
+Exercice
+Implement an instance of the Ordering typeclass for pairs of type (A, B), where
+A, B have Ordering instances defined on them.
+given pairOrdering[A, B](using orda: Ordering[A], ordb: Ordering[B])
+: Ordering[(A, B)]with
+defcompare(x:(A, B), y:(A, B))=
+val c = orda.compare(x._1, y._1)
+if c !=0then c else ordb.compare(x._2, y._2)
+45
+
+Type Classes and Extension Methods
+Like any trait, a type class trait may define extension methods.
+For, instance, the Ordering trait would usually contain comparison methods like
+this:
+trait Ordering[A]:
+defcompare(x: A, y: A):Int
+extension(x: A)
+def<(y: A):Boolean=compare(x, y)<0
+def<=(y: A):Boolean=compare(x, y)<=0
+def>(y: A):Boolean=compare(x, y)>0
+def>=(y: A):Boolean=compare(x, y)>=0
+46
+
+Visibility of Extension Methods
+For instance one can write:
+There’s no need to name and import the Ordering instance to get access to
+the extension method < on operands of type T.
+We have an Ordering[T] instance in scope, that’s where the extension method
+comes from.
+def merge[T: Ordering](xs:List[T], ys:List[T]):Boolean=(xs, ys)match
+case(Nil, _)=> ys
+case(_, Nil)=> xs
+case(x :: xs1, y :: ys1)=>
+if x < y then x ::merge(xs1, ys)
+else y ::merge(xs, ys1)
+47
+
+Summary
+Type classes provide a way to turn types into values.
+Unlike class extension, type classes
+can be defined at any time without changing existing code,
+can be conditional.
+In Scala, type classes are constructed from parameterized traits and given
+instances.
+Type classes exist also in some other languages, for instance in Rust (traits), Swi 
+(protocols), or Haskell (type classes).
+Type classes give rise to a new kind of polymorphism, which is sometimes called
+ad-hoc polymorphism. This means that the a type TC[A] has different
+implementations for different types A.
+48
+
+References
+Coursera course “Functional Programming Principles in Scala”, Odersky, M.
+Odersky, M., Spoon, L., & Venners, B. (2021). Programming in Scala (5th ed.).
+Artima Press. ISBN: 978-0-989-77450-1.
+Scala documentation on https://docs.scala-lang.org/
+49
+

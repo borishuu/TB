@@ -11,12 +11,20 @@ export interface PoolFile {
     createdAt: string;
 }
 
+export type ContextType = 'evalInspiration' | 'course';
+
+export type LocalFile = {
+    file: File;
+    contextType: ContextType;
+ };
+
+ export type FileWithContext = {
+    file: File | { fileName: string; filePath: string; mimeType: string };
+    contextType: ContextType;
+  };
+
 export interface GenerateOptions {
-    files: (File |{
-        fileName: string;
-        filePath: string;
-        mimeType: string;
-    })[];
+    files: FileWithContext[];
     questionTypes: string[];
     globalDifficulty: string;
 }
