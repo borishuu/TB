@@ -35,7 +35,14 @@ export interface GenerationResult {
     metadata?: Record<string, any>;
 }
 
+export interface RegenerateOptions {
+    prompt: string;
+    question: any;
+}
+
+
 export interface LLMHandler {
     genModel: string;
     generateEvaluation(options: GenerateOptions): Promise<GenerationResult>;
+    regenerateQuestion(options: RegenerateOptions): Promise<string>;
 }

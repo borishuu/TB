@@ -2,91 +2,15 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI, ObjectSchema, Schema, SchemaType } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
-
-// TODO centralize all AI requests in a lib file
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
-
-const questionSchema: Schema = {
-    type: SchemaType.OBJECT,
-    properties: {
-        number: {
-            type: SchemaType.STRING,
-            description: "The question number.",
-            nullable: false
-        },
-        questionText: {
-            type: SchemaType.STRING,
-            description: "The text of the question.",
-            nullable: false
-        },
-        questionType: {
-            type: SchemaType.STRING,
-            format: "enum",
-            description: "The type of the question.",
-            enum: ["mcq", "open", "codeComprehension", "codeWriting"],
-            nullable: false
-        },
-        options: {
-            type: SchemaType.ARRAY,
-            description: "Array of answer options for multiple choice questions.",
-            items: {
-                type: SchemaType.STRING
-            },
-            minItems: 0
-        },
-        correctAnswer: {
-            type: SchemaType.STRING,
-            description: "The correct answer for the question.",
-            nullable: false
-        },
-        explanation: {
-            type: SchemaType.STRING,
-            description: "An explanation for the correct answer."
-        }
-    },
-    required: ["number", "questionText", "questionType", "correctAnswer"]
-};
-
-
-async function generateNewQuestion(prompt: string, question: any) {
-    const questionRegenPrompt = `
-Tu es un générateur de quiz intelligent. Ta tâche est d'améliorer la question fournie en suivant précisément ces consignes : 
-
-- Respecte le format : Garde le même type de question (${question.questionType}).
-- Améliore la clarté et la pertinence : Reformule si nécessaire pour plus de précision et d'intelligibilité.
-- Respecte les contraintes utilisateur : Applique ces modifications demandées : "${prompt}".
-
-Question originale à améliorer :  
-${JSON.stringify(question)}
-`;
-
-    const regenModel = genAI.getGenerativeModel({
-        model: 'models/gemini-2.0-flash',
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: questionSchema
-        }
-    });
-
-    const result = await regenModel.generateContent([
-        questionRegenPrompt
-    ]);
-
-    return result.response.text();
-}
-
+import { GeminiHandler } from '@/lib/llm/GeminiHandler';
 
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {
     try {
-        // Ensure only a logged in user can call this route
         const { userId, error } = await verifyAuth(request);
 
         if (error) {
             return NextResponse.json({ error }, { status: 401 });
         }
-
         const { id } = await context.params;
         const quizId = parseInt(id, 10);
         if (isNaN(quizId)) {
@@ -98,7 +22,7 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
         const { questionNumber, prompt } = body;
 
         if (!questionNumber || !prompt) {
-            return NextResponse.json({ error: "Both 'questionNumber' and 'prompt' are required" }, { status: 400 });
+            return NextResponse.json({ error: "Both questionNumber and prompt are required" }, { status: 400 });
         }
 
         // Fetch the existing quiz
@@ -120,8 +44,9 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
             return NextResponse.json({ error: "Question not found" }, { status: 404 });
         }
 
-        // Generate a new question using AI
-        const newQuestion = await generateNewQuestion(prompt, currentContent[questionIndex]);
+        const llmHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
+
+        const newQuestion = await llmHandler.regenerateQuestion({ prompt, question: currentContent[questionIndex] });
 
         if (!newQuestion) {
             return NextResponse.json({ error: "Failed to generate new question" }, { status: 500 });

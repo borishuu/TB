@@ -2,7 +2,7 @@ import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import { GeminiHandler } from '@/lib/llm/GeminiHandler';
-import { LLMHandler, FileWithContext, LocalFile } from '@/types';
+import { LLMHandler, FileWithContext } from '@/types';
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
 
-    const llmHandler: LLMHandler = new GeminiHandler(process.env.GEMINI_API_KEY as string);
+    const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
 
     try {
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "At least one question type must be provided" }, { status: 400 });
         }
 
-        // ---- Parse local file metadata ----
+        // Parse local file metadata
         let parsedMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
         try {
             parsedMeta = JSON.parse(contentFilesMeta);

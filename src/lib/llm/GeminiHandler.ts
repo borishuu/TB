@@ -1,38 +1,59 @@
 import { GoogleGenerativeAI, Schema, SchemaType } from '@google/generative-ai';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { performance } from 'perf_hooks';
-import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType } from '@/types';
+import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
 import * as prompts from './prompts';
 import fs from 'fs';
 import path from 'path';
 
-// TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
-const quizSchema: Schema = {
+const questionSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+      number: {
+          type: SchemaType.STRING,
+          description: "The question number.",
+          nullable: false
+      },
+      questionText: {
+          type: SchemaType.STRING,
+          description: "The text of the question.",
+          nullable: false
+      },
+      questionType: {
+          type: SchemaType.STRING,
+          format: "enum",
+          description: "The type of the question.",
+          enum: ["mcq", "open", "codeComprehension", "codeWriting"],
+          nullable: false
+      },
+      options: {
+          type: SchemaType.ARRAY,
+          description: "Array of answer options for multiple choice questions.",
+          items: {
+              type: SchemaType.STRING
+          },
+          minItems: 0
+      },
+      correctAnswer: {
+          type: SchemaType.STRING,
+          description: "The correct answer for the question.",
+          nullable: false
+      },
+      explanation: {
+          type: SchemaType.STRING,
+          description: "An explanation for the correct answer."
+      }
+  },
+  required: ["number", "questionText", "questionType", "correctAnswer"]
+};
+
+const evalSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     content: {
       type: SchemaType.ARRAY,
       minItems: 10,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          number: { type: SchemaType.STRING },
-          questionText: { type: SchemaType.STRING },
-          questionType: {
-            type: SchemaType.STRING,
-            format: 'enum',
-            enum: ['mcq', 'open', 'codeComprehension', 'codeWriting'],
-          },
-          options: {
-            type: SchemaType.ARRAY,
-            items: { type: SchemaType.STRING },
-            minItems: 0,
-          },
-          correctAnswer: { type: SchemaType.STRING },
-          explanation: { type: SchemaType.STRING },
-        },
-        required: ['number', 'questionText', 'questionType', 'correctAnswer'],
-      },
+      items: questionSchema,
     },
   },
   required: ['content'],
@@ -40,12 +61,24 @@ const quizSchema: Schema = {
 
 export class GeminiHandler implements LLMHandler {
   genModel = 'models/gemini-2.5-flash';
+  private static instance: GeminiHandler | null = null;
   private genAI: GoogleGenerativeAI;
   private fileManager: GoogleAIFileManager;   
 
-  constructor(apiKey: string) {
+  private constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.fileManager = new GoogleAIFileManager(apiKey);
+  }
+
+  public static getInstance(apiKey: string): GeminiHandler {
+    if (!GeminiHandler.instance) {
+      GeminiHandler.instance = new GeminiHandler(apiKey);
+    }
+    return GeminiHandler.instance;
+  }
+
+  private combinePropts(systemPrompt: string, userPrompt: string): string {
+    return `${systemPrompt} \n\n ${userPrompt}`;
   }
 
   private async uploadFiles(
@@ -70,7 +103,7 @@ export class GeminiHandler implements LLMHandler {
           await fs.promises.unlink(tmpFilePath);
           return { uri: upload.file.uri, mimeType: upload.file.mimeType, contextType: file.contextType };
         } else {
-          // From database
+          // From pool
           const upload = await this.fileManager.uploadFile(file.file.filePath, {
             mimeType: file.file.mimeType,
             displayName: file.file.fileName,
@@ -86,8 +119,8 @@ export class GeminiHandler implements LLMHandler {
 
   private async generateContext(uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<string> {
     const model = this.genAI.getGenerativeModel({ model: this.genModel });
-
-    const contextPrompt = `${prompts.contextSystemPrompt} \n\n ${prompts.contextUserPromptTemplate("")}`;
+    
+    const contextPrompt = this.combinePropts(prompts.contextSystemPrompt, prompts.contextUserPromptTemplate(""));
 
     //console.log("Generating context with prompt:", contextPrompt);
     //console.log("Files to upload:", courseFiles.map(f => f.file instanceof File ? f.file.name : f.file.fileName));
@@ -112,7 +145,7 @@ export class GeminiHandler implements LLMHandler {
       model: this.genModel,
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: quizSchema,
+        responseSchema: evalSchema,
       },
     });
 
@@ -122,7 +155,8 @@ export class GeminiHandler implements LLMHandler {
         fileUri: r.uri, 
         mimeType: r.mimeType },
       }))
-      const evalPrompt = `${prompts.quizSystemPrompt(true)} \n\n ${prompts.quizUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, true)}`;
+      
+      const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(true), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, true));
       const result = await model.generateContent([ 
         evalPrompt,
         ...fileData 
@@ -131,7 +165,7 @@ export class GeminiHandler implements LLMHandler {
 
     } else {
       console.log("No inspiration files dtected.");
-      const evalPrompt = `${prompts.quizSystemPrompt(false)} \n\n ${prompts.quizUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, false)}`;
+      const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(false), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, false));
 
       const result = await model.generateContent([ evalPrompt ]);
       return result.response.text();
@@ -139,14 +173,6 @@ export class GeminiHandler implements LLMHandler {
   }
 
   async generateEvaluation(options: GenerateOptions): Promise<GenerationResult> {
-    options.files.forEach(file => {
-      if (file.contextType === 'course') {
-        console.log(`File ${file.file instanceof File ? file.file.name : file.file.fileName} is a course context file.`);
-      } else if (file.contextType === 'evalInspiration') {
-        console.log(`File ${file.file instanceof File ? file.file.name : file.file.fileName} is an eval inspiration context file.`);
-      }
-    });
-
     const uploadedFiles = await this.uploadFiles(options.files);
 
     if (uploadedFiles.some(f => f.contextType === 'evalInspiration')) {
@@ -171,4 +197,23 @@ export class GeminiHandler implements LLMHandler {
       },
     };
   }
+
+  async regenerateQuestion(options: RegenerateOptions) {
+    const questionRegenPrompt = this.combinePropts(prompts.regenQuestionSystemPrompt, prompts.regenQuestionUserPrompt(options.question, options.prompt));
+
+    const regenModel = this.genAI.getGenerativeModel({
+        model: this.genModel,
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: questionSchema
+        }
+    });
+
+    const result = await regenModel.generateContent([
+        questionRegenPrompt
+    ]);
+
+    return result.response.text();
+  }
 }
+
