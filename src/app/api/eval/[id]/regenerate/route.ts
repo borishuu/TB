@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { GeminiHandler } from '@/lib/llm/GeminiHandler';
+import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
 
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {
     try {

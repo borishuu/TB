@@ -1,63 +1,11 @@
-import { GoogleGenerativeAI, Schema, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { performance } from 'perf_hooks';
 import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
-import * as prompts from './prompts';
+import * as responseSchemas from './ResponseSchemas';
+import * as prompts from '../prompts';
 import fs from 'fs';
 import path from 'path';
-
-const questionSchema: Schema = {
-  type: SchemaType.OBJECT,
-  properties: {
-      number: {
-          type: SchemaType.STRING,
-          description: "The question number.",
-          nullable: false
-      },
-      questionText: {
-          type: SchemaType.STRING,
-          description: "The text of the question.",
-          nullable: false
-      },
-      questionType: {
-          type: SchemaType.STRING,
-          format: "enum",
-          description: "The type of the question.",
-          enum: ["mcq", "open", "codeComprehension", "codeWriting"],
-          nullable: false
-      },
-      options: {
-          type: SchemaType.ARRAY,
-          description: "Array of answer options for multiple choice questions.",
-          items: {
-              type: SchemaType.STRING
-          },
-          minItems: 0
-      },
-      correctAnswer: {
-          type: SchemaType.STRING,
-          description: "The correct answer for the question.",
-          nullable: false
-      },
-      explanation: {
-          type: SchemaType.STRING,
-          description: "An explanation for the correct answer."
-      }
-  },
-  required: ["number", "questionText", "questionType", "correctAnswer"]
-};
-
-const evalSchema: Schema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    content: {
-      type: SchemaType.ARRAY,
-      minItems: 10,
-      items: questionSchema,
-    },
-  },
-  required: ['content'],
-};
 
 export class GeminiHandler implements LLMHandler {
   genModel = 'models/gemini-2.5-flash';
@@ -145,7 +93,7 @@ export class GeminiHandler implements LLMHandler {
       model: this.genModel,
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: evalSchema,
+        responseSchema: responseSchemas.evalSchema,
       },
     });
 
@@ -205,7 +153,7 @@ export class GeminiHandler implements LLMHandler {
         model: this.genModel,
         generationConfig: {
             responseMimeType: "application/json",
-            responseSchema: questionSchema
+            responseSchema: responseSchemas.questionSchema
         }
     });
 

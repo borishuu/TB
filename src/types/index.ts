@@ -1,7 +1,16 @@
+interface Question {
+    number: string;
+    questionText: string;
+    questionType: string;
+    options?: string[];
+    correctAnswer: string;
+    explanation?: string;
+}
+
 export interface Eval {
     id: number;
     title: string;
-    content: any;
+    content: { content: Question[] };
 }
 
 export interface PoolFile {
@@ -9,6 +18,7 @@ export interface PoolFile {
     fileName: string;
     course: object;
     createdAt: string;
+    filePath?: string;
 }
 
 export type ContextType = 'evalInspiration' | 'course';

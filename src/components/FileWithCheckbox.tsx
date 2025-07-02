@@ -1,19 +1,13 @@
 import BaseFileCard from '@/components/BaseFileCard';
 import { useState } from 'react';
-
-interface File {
-  id: number;
-  fileName: string;
-  course: object;
-  createdAt: string;
-}
+import { PoolFile } from '@/types';
 
 export default function FileWithCheckbox({
   file,
   onDelete,
   onCheckboxChange,
 }: {
-  file: File;
+  file: PoolFile;
   onDelete?: (id: number) => void;
   onCheckboxChange?: (fileId: number, checked: boolean) => void;
 }) {

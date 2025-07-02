@@ -1,7 +1,7 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-import { GeminiHandler } from '@/lib/llm/GeminiHandler';
+import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
 import { LLMHandler, FileWithContext } from '@/types';
 
 export async function POST(request: NextRequest) {

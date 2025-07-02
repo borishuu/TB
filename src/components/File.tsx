@@ -3,15 +3,9 @@
 import { TrashIcon } from '@heroicons/react/24/solid';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
+import { PoolFile } from '@/types';
 
-interface File {
-  id: number;
-  fileName: string;
-  course: object;
-  createdAt: string;
-}
-
-export default function File({ file, onDelete }: { file: File; onDelete?: (id: number) => void }) {
+export default function File({ file, onDelete }: { file: PoolFile; onDelete?: (id: number) => void }) {
   const router = useRouter();
 
   return (

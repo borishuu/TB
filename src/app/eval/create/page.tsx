@@ -3,25 +3,15 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FileWithCheckbox from '@/components/FileWithCheckbox';
-import { LocalFile } from '@/types';
+import { LocalFile, PoolFile } from '@/types';
 
-interface SuggestedFile {
-  id: number;
-  fileName: string;
-  course: object;
-  createdAt: string;
-  filePath?: string;
-}
-
-// TODO: UNIFY FILE TYPES (LOCAL AND POOL) INSTEAD OF MIXING ID + INDEX. POOL FILES NOT BEING HANDLED BY FILE CONTEXT TYPE
 export default function CreateQuiz() {
   const [title, setTitle] = useState('');
   const [topics, setTopics] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
-  //const [files, setFiles] = useState<File[]>([]);
   const [files, setFiles] = useState<LocalFile[]>([]);
-  const [suggestedFiles, setSuggestedFiles] = useState<SuggestedFile[]>([]);
+  const [suggestedFiles, setSuggestedFiles] = useState<PoolFile[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [localDragActive, setLocalDragActive] = useState(false);
