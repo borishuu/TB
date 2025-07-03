@@ -4,14 +4,14 @@ import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { userId, error } = await verifyAuth(request);
 
         if (error) {
             return NextResponse.json({ error }, { status: 401 });
         }
-        const { id } = await context.params;
+        const { id } = await params;
         const quizId = parseInt(id, 10);
         if (isNaN(quizId)) {
             return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });

@@ -6,10 +6,19 @@ import EvalCard from '@/components/EvalCard';
 
 export default function EvalsGrid({ evaluations }: { evaluations: Eval[] }) {
     const [search, setSearch] = useState('');
+    const [evalList, setEvalList] = useState(evaluations);
   
-    const filtered = evaluations.filter((ev) =>
+    const filtered = evalList.filter((ev) =>
         ev.title.toLowerCase().includes(search.toLowerCase())
     );
+
+    const handleDelete = (id: number) => {
+      setEvalList((prev) => prev.filter((ev) => ev.id !== id));
+    };
+  
+    const handleDuplicate = (newEval: Eval) => {
+      setEvalList((prev) => [newEval, ...prev]);
+    };
   
     return (
       <>
@@ -26,7 +35,12 @@ export default function EvalsGrid({ evaluations }: { evaluations: Eval[] }) {
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((ev) => (
-              <EvalCard key={ev.id} evaluation={ev} />
+              <EvalCard
+              key={ev.id}
+              evaluation={ev}
+              onDelete={() => handleDelete(ev.id)}
+              onDuplicate={handleDuplicate}
+            />
             ))}
           </div>
         ) : (

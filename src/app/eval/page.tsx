@@ -1,4 +1,4 @@
-import { fetchEvals } from '@/lib/data/evals';
+import { fetchEvals } from '@/lib/dataFetch/evals';
 import Link from 'next/link';
 import EvalsGrid from '@/components/EvalsGrid';
 
