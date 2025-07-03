@@ -15,7 +15,7 @@ npm install
 
 ### 3. Set environment variables
 
-Create a file at the root of the foler named `.env` and add the following contents:
+Create a file at the root of the folder named `.env` and add the following contents:
 
 ```
 GEMINI_API_KEY="..."
