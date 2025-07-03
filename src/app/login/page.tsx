@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {useAuth} from '@/context/authContext';
+import { useAuth } from '@/context/authContext';
 
 export default function Login() {
-    const {fetchData} = useAuth();
+  const {fetchData} = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

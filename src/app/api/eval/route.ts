@@ -1,18 +1,19 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-import { GeminiHandler } from '@/lib/llm/GeminiHandler';
-import { LLMHandler } from '@/types';
+import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
+import { LLMHandler, FileWithContext } from '@/types';
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
     const title = form.get('title') as string;
     const contentFiles = form.getAll("contentFiles") as File[];
+    const contentFilesMeta = form.get("contentFilesMeta") as string;
     const globalDifficulty = form.get("difficulty") as string;
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
 
-    const llmHandler: LLMHandler = new GeminiHandler(process.env.GEMINI_API_KEY as string);
+    const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
 
     try {
 
@@ -39,6 +40,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "At least one question type must be provided" }, { status: 400 });
         }
 
+        // Parse local file metadata
+        let parsedMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
+        try {
+            parsedMeta = JSON.parse(contentFilesMeta);
+        } catch (e) {
+            return NextResponse.json({ error: 'Invalid contentFilesMeta JSON' }, { status: 400 });
+        }
+
+        // TODO: Handle pool files context types
         let poolFiles: { fileName: string, filePath: string, mimeType: string }[] = [];
 
         if (suggestedFileIds.length > 0) {
@@ -54,7 +64,17 @@ export async function POST(request: NextRequest) {
           poolFiles = results;
         }
 
-        const allFiles: (File | { fileName: string, filePath: string, mimeType: string })[] = [...contentFiles, ...poolFiles];
+        //const allFiles: (LocalFile | { fileName: string, filePath: string, mimeType: string })[] = [...contentFiles, ...poolFiles];
+        const allFiles: FileWithContext[] = [
+            ...contentFiles.map(f => ({ 
+                file: f, 
+                contextType: parsedMeta.find(m => m.name === f.name)?.contextType || 'course' 
+            } as FileWithContext)), 
+            ...poolFiles.map(f => ({ 
+                file: { fileName: f.fileName, filePath: f.filePath, mimeType: f.mimeType }, 
+                contextType: 'course' 
+            } as FileWithContext))
+        ];
 
         const generationResult = await llmHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty });
      

@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 // TODO: dynamically adapt schema based on user input, ajouter descriptions sur fichiers, edit question, stocker prompt avec quiz pour avoir un suivi, creation date, gemni model, etc... penser cdc
-const quizSchema: Schema = {
+/*const quizSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     content: {
@@ -143,3 +143,4 @@ export class GeminiHandler implements LLMHandler {
     };
   }
 }
+*/

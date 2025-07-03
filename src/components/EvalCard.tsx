@@ -1,25 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Eval } from '@/types';
 
-// TODO: global type definition
-interface Quiz {
-    id: number;
-    title: string;
-    content: any; // JSON content (array of questions)
-}
-
-export default function QuizCard({ quiz }: { quiz: Quiz }) {
+export default function EvalCard({ evaluation }: { evaluation: Eval }) {
     const router = useRouter();
-    const questionCount = Array.isArray(quiz.content.content) ? quiz.content.content.length : 0;
+    const questionCount = Array.isArray(evaluation.content.content) ? evaluation.content.content.length : 0;
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 border border-gray-200 hover:shadow-xl transition">
-            <h2 className="text-xl font-semibold">{quiz.title}</h2>
+            <h2 className="text-xl font-semibold">{evaluation.title}</h2>
             <p className="text-gray-500">Questions: {questionCount}</p>
             <button
                 className="mt-3 button"
-                onClick={() => router.push(`/quiz/${quiz.id}`)}
+                onClick={() => router.push(`/eval/${evaluation.id}`)}
             >
                 Afficher
             </button>

@@ -16,7 +16,7 @@ const NAV_ITEMS_DISCONNECTED = [
 ];
 
 const NAV_ITEMS_CONNECTED = [
-  { href: '/quiz', label: 'Mes Evaluations' },
+  { href: '/eval', label: 'Mes Evaluations' },
   { href: '/files', label: 'Mes Fichiers' },
 ];
 

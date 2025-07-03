@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ParamValue } from 'next/dist/server/request/params';
+import remarkBreaks from 'remark-breaks';
 
 interface Question {
     number: string;
@@ -85,8 +86,10 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
 
     const renderers = {
         code({ inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '');
-            const codeString = String(children).replace(/\n$/, '');
+            const match = /language-(\w+)/.exec(className || '');            
+            //const codeString = String(children).replace(/\n$/, '');
+            const codeString = String(children);
+
     
             if (!inline && match) {
                 return (
@@ -94,6 +97,9 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                         style={materialLight}
                         language={match[1]}
                         PreTag="div"
+                        customStyle={{
+                            fontSize: '0.85em',
+                        }}
                         {...props}
                     >
                         {codeString}
@@ -130,14 +136,14 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                     <textarea
                         value={editQuestion.questionText}
                         onChange={(e) => handleChange("questionText", e.target.value)}
-                        className="border p-1 rounded w-full max-w-2xl min-h-[120px]"
+                        className="border p-1 rounded w-full min-h-[240px]"
                     />
                 ) : (
-                    <div className="max-w-2xl break-words">
+                    <div className="break-words">
                         <div className="font-semibold">
                             {`${question.number}.`}
                         </div>
-                        <ReactMarkdown components={renderers}>
+                        <ReactMarkdown components={renderers} remarkPlugins={[remarkBreaks]}>
                             {question.questionText /* TODO fix sometimes code blocks not formatted correctly */}
                         </ReactMarkdown>
                     </div>
@@ -193,7 +199,7 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                     ) : (
                         <div className="whitespace-pre-wrap break-words">
                             <strong>Réponse :</strong>{" "}
-                            <ReactMarkdown components={renderers}>
+                            <ReactMarkdown components={renderers} remarkPlugins={[remarkBreaks]}>
                                 {question.correctAnswer}
                             </ReactMarkdown>
                         </div>

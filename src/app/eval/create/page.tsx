@@ -2,23 +2,16 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import File from '@/components/File';
-
-interface SuggestedFile {
-  id: number;
-  fileName: string;
-  course: object;
-  createdAt: string;
-  filePath?: string;
-}
+import FileWithCheckbox from '@/components/FileWithCheckbox';
+import { LocalFile, PoolFile } from '@/types';
 
 export default function CreateQuiz() {
   const [title, setTitle] = useState('');
   const [topics, setTopics] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
-  const [files, setFiles] = useState<File[]>([]);
-  const [suggestedFiles, setSuggestedFiles] = useState<SuggestedFile[]>([]);
+  const [files, setFiles] = useState<LocalFile[]>([]);
+  const [suggestedFiles, setSuggestedFiles] = useState<PoolFile[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [localDragActive, setLocalDragActive] = useState(false);
@@ -37,8 +30,14 @@ export default function CreateQuiz() {
       formData.append('topics', topics);
       formData.append('difficulty', difficulty);      
       questionTypes.forEach((type) => formData.append('questionTypes', type));
-      files.forEach((file) => formData.append('contentFiles', file));
       suggestedFiles.forEach((file) => formData.append('suggestedFileIds', String(file.id)));
+
+      files.forEach((file) => formData.append('contentFiles', file.file));
+      const fileMetadata = files.map((localFile, _) => ({
+        name: localFile.file.name,
+        contextType: localFile.contextType,
+      }));      
+      formData.append('contentFilesMeta', JSON.stringify(fileMetadata));
 
       const response = await fetch('/api/quiz', {
         method: 'POST',
@@ -78,7 +77,12 @@ export default function CreateQuiz() {
 
   const addFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
-    setFiles((prev) => [...prev, ...Array.from(newFiles)]);
+    //setFiles((prev) => [...prev, ...Array.from(newFiles)]);
+    const wrappedFiles: LocalFile[] = Array.from(newFiles).map((file) => ({
+      file,
+      contextType: 'course',
+    }));
+    setFiles((prev) => [...prev, ...wrappedFiles]);
   };
 
   const handleLocalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,6 +111,18 @@ export default function CreateQuiz() {
 
   const removeSuggestedFile = (id: number) => {
     setSuggestedFiles((prev) => prev.filter((file) => file.id !== id));
+  };
+
+  const changeLocalFileContextType = (index: number) => {
+    setFiles((prev) =>
+      prev.map((f, i) =>
+        i === index ? { ...f, contextType: f.contextType === 'course' ? 'evalInspiration' : 'course' } : f
+      )
+    );
+  };
+
+  const changePoolFileContextType = (id: number) => {
+    //setSuggestedFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
   const toggleQuestionType = (type: string) => {
@@ -207,9 +223,10 @@ export default function CreateQuiz() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   {suggestedFiles.map((file) => (
                     <div key={file.id} className="relative">
-                      <File
+                      <FileWithCheckbox
                         file={file}
                         onDelete={() => removeSuggestedFile(file.id)}
+                        onCheckboxChange={() => changePoolFileContextType(file.id)}
                       />
                     </div>
                   ))}
@@ -252,9 +269,10 @@ export default function CreateQuiz() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   {files.map((file, index) => (
                     <div key={index} className="relative">
-                      <File
-                        file={{ id: index, fileName: file.name, course: {}, createdAt: '' }}
+                      <FileWithCheckbox
+                        file={{ id: index, fileName: file.file.name, course: {}, createdAt: '' }}
                         onDelete={() => removeFile(index)}
+                        onCheckboxChange={() => changeLocalFileContextType(index)}
                       />
                     </div>
                   ))}

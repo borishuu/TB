@@ -9,7 +9,6 @@ import pdfParse from 'pdf-parse';
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
 export async function POST(request: NextRequest) {
-    console.log("POST /api/file");
     const form = await request.formData();
 
     const course = form.get('course') as string;
