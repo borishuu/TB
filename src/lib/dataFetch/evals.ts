@@ -37,19 +37,3 @@ export async function fetchEval(id: string): Promise<Eval> {
 
     return response.json();
 }
-
-export async function deleteEval(id: number): Promise<void> {
-    const cookieStore = await cookies();
-
-    const response = await fetch(`/api/user/eval/${id}`, {
-      method: 'DELETE',
-      headers: {
-        Cookie: cookieStore.toString(),
-    },
-    });
-  
-    if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || 'Failed to delete evaluation');
-    }
-  }
