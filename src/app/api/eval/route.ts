@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
         }
 
-        await prisma.quiz.create({
+        const createdEval = await prisma.quiz.create({
             data: {
                 title: title,
                 content: quizJSON,
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        return NextResponse.json(generationResult);
+        return NextResponse.json(createdEval.id);
     } catch (error) {
         console.log(error);
         return NextResponse.json({ error: "Failed to login" }, { status: 500 });

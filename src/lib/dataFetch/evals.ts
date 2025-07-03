@@ -14,7 +14,8 @@ export async function fetchEvals(): Promise<Eval[]> {
     });
 
     if (!response.ok) {
-        throw new Error('Failed to fetch evaluations');
+        const { error } = await response.json();
+        throw new Error(error || 'Failed to fetch evaluations');
     }
 
     return response.json();
@@ -30,7 +31,8 @@ export async function fetchEval(id: string): Promise<Eval> {
     });
 
     if (!response.ok) {
-        throw new Error('Failed to fetch evaluation');
+        const { error } = await response.json();
+        throw new Error(error || 'Failed to fetch evaluation');
     }
 
     return response.json();

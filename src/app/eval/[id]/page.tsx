@@ -1,4 +1,4 @@
-import { fetchEval } from '@/lib/data/evals';
+import { fetchEval } from '@/lib/dataFetch/evals';
 import QuestionCard from '@/components/QuestionCard';
 
 export default async function QuizPage({ params }: { params: Promise<{ id: string }> }) {

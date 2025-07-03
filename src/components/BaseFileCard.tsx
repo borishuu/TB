@@ -1,18 +1,9 @@
-// components/BaseFileCard.tsx
-'use client';
-
 import { TrashIcon } from '@heroicons/react/24/solid';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
-
-interface File {
-  id: number;
-  fileName: string;
-  course: object;
-  createdAt: string;
-}
+import { PoolFile } from '@/types';
 
 interface BaseFileCardProps {
-  file: File;
+  file: PoolFile;
   onDelete?: (id: number) => void;
   children?: React.ReactNode;
 }

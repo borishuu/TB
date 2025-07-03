@@ -14,7 +14,8 @@ export async function fetchFiles(): Promise<PoolFile[]> {
     });
 
     if (!response.ok) {
-        throw new Error('Failed to fetch files');
+        const { error } = await response.json();
+        throw new Error(error || 'Failed to fetch files');
     }
 
     return response.json();

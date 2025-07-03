@@ -39,7 +39,7 @@ export default function CreateQuiz() {
       }));      
       formData.append('contentFilesMeta', JSON.stringify(fileMetadata));
 
-      const response = await fetch('/api/quiz', {
+      const response = await fetch('/api/eval', {
         method: 'POST',
         body: formData,
       });
@@ -50,7 +50,7 @@ export default function CreateQuiz() {
 
       const data = await response.json();
       console.log(data);
-      // router.push('/some-success-page');
+      router.push(`/eval/${data}`);
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -139,8 +139,8 @@ export default function CreateQuiz() {
   ];
 
   return (
-    <div className="flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-3xl">
+    <div className="relative flex items-center justify-center">
+      <div className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
         <h2 className="text-2xl font-bold text-center mb-6">Générer une évaluation</h2>
 
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
@@ -290,6 +290,12 @@ export default function CreateQuiz() {
           </button>
         </form>
       </div>
+
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-lg">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
     </div>
   );
 }
