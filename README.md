@@ -31,6 +31,10 @@ docker-compose up -d
 ```
 
 ```bash
+docker exec -it evagen-db psql -U admin -d db -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+```bash
 npx prisma db push
 npx prisma generate
 ```

@@ -37,7 +37,7 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
 
     const handleSave = async () => {
         try {
-            const response = await fetch(`/api/quiz/${quizId}`, {
+            const response = await fetch(`/api/eval/${quizId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -65,7 +65,7 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
     const handleRegenerate = async () => {
         try {
             setIsRegenerating(true);
-            const response = await fetch(`/api/quiz/${quizId}/regenerate`, {
+            const response = await fetch(`/api/eval/${quizId}/regenerate`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
