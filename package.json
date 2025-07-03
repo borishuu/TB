@@ -9,22 +9,28 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/genai": "^1.5.1",
     "@google/generative-ai": "^0.24.0",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.4.1",
     "bcrypt": "^5.1.1",
     "jose": "^6.0.8",
     "next": "15.2.1",
+    "pdf-parse": "^1.1.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "remark-breaks": "^4.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "prisma": "^6.4.1",
+    "prisma": "^6.10.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

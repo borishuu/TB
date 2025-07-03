@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         // Ensure only a logged in user can call this route
         const { userId, error } = await verifyAuth(request);
@@ -12,27 +12,27 @@ export async function GET(request: NextRequest, context: { params: { id: string 
             return NextResponse.json({ error }, { status: 401 });
         }
         
-        const { id } = await context.params;
+        const { id } = await params;
         const quizId = parseInt(id, 10);
 
         if (isNaN(quizId)) {
-            return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
         }
 
         const quiz = await prisma.quiz.findUnique({
             where: { id: quizId},
         });
 
-        if (!quiz) return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+        if (!quiz) return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
 
         return NextResponse.json(quiz, { status: 200 });
     } catch (error) {
-        console.error("Error fetching quiz:", error);
-        return NextResponse.json({ error: "Failed to fetch quiz" }, { status: 500 });
+        console.error("Error fetching evaluation:", error);
+        return NextResponse.json({ error: "Failed to fetch evaluation" }, { status: 500 });
     }
 }
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         // Ensure only a logged in user can call this route
         const { userId, error } = await verifyAuth(request);
@@ -41,10 +41,10 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
             return NextResponse.json({ error }, { status: 401 });
         }
 
-        const { id } = await context.params;
+        const { id } = await params;
         const quizId = parseInt(id, 10);
         if (isNaN(quizId)) {
-            return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
         }
 
         // Expecting the updated question in the request body
@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
         });
 
         if (!quiz) {
-            return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+            return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
         }
 
         const quizContentObject = quiz.content as Prisma.JsonObject
@@ -87,7 +87,48 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 
         return NextResponse.json(updatedQuiz, { status: 200 });
     } catch (error) {
-        console.error("Error updating quiz:", error);
-        return NextResponse.json({ error: "Failed to update quiz" }, { status: 500 });
+        console.error("Error updating evaluation:", error);
+        return NextResponse.json({ error: "Failed to update evaluation" }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        // Ensure only a logged in user can call this route
+        const { userId, error } = await verifyAuth(request);
+
+        if (error) {
+            return NextResponse.json({ error }, { status: 401 });
+        }
+
+        const { id } = await params;
+        const quizId = parseInt(id, 10);
+
+        if (isNaN(quizId)) {
+            return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
+        }
+
+        // Ensure the eval belongs to the authenticated user
+        const quiz = await prisma.quiz.findUnique({
+            where: { id: quizId },
+        });
+
+        if (!quiz) {
+            return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+        }
+
+        if (quiz.authorId !== userId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
+
+        await prisma.quiz.delete({
+            where: { id: quizId },
+        });
+
+        return NextResponse.json({ message: "Evaluation deleted successfully" }, { status: 200 });
+
+    } catch (error) {
+        console.error("Error deleting evaluation:", error);
+        return NextResponse.json({ error: "Failed to delete evaluation" }, { status: 500 });
     }
 }

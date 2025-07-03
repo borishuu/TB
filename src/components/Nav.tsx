@@ -16,7 +16,7 @@ const NAV_ITEMS_DISCONNECTED = [
 ];
 
 const NAV_ITEMS_CONNECTED = [
-  { href: '/quiz', label: 'Mes Evaluations' },
+  { href: '/eval', label: 'Mes Evaluations' },
   { href: '/files', label: 'Mes Fichiers' },
 ];
 
@@ -58,14 +58,14 @@ export default function Nav() {
         {/* Right side */}
         <div className="flex items-center space-x-8">
           {NAV_ITEMS_PUBLIC.map(({ href, label }) => (
-            <NavLink key={href} href={href} label={label} isActive={pathname === href} />
+            <NavLink key={href} href={href} label={label} isActive={pathname.startsWith(href)} />
           ))}
 
           {/* Conditionally render based on the user's authentication status */}
           {user ? (
             <>
               {NAV_ITEMS_CONNECTED.map(({ href, label }) => (
-                <NavLink key={href} href={href} label={label} isActive={pathname === href} />
+                <NavLink key={href} href={href} label={label} isActive={pathname.startsWith(href)} />
               ))}
               <button
                 onClick={handleLogout}

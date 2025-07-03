@@ -1,13 +1,14 @@
-'use client';
-
 import { TrashIcon } from '@heroicons/react/24/solid';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/navigation';
 import { PoolFile } from '@/types';
 
-export default function File({ file, onDelete }: { file: PoolFile; onDelete?: (id: number) => void }) {
-  const router = useRouter();
+interface BaseFileCardProps {
+  file: PoolFile;
+  onDelete?: (id: number) => void;
+  children?: React.ReactNode;
+}
 
+export default function BaseFileCard({ file, onDelete, children }: BaseFileCardProps) {
   return (
     <div
       className="relative w-30 h-30 p-1 hover:shadow-lg transition flex flex-col items-center justify-center bg-white text-center"
@@ -29,6 +30,8 @@ export default function File({ file, onDelete }: { file: PoolFile; onDelete?: (i
       >
         {file.fileName}
       </span>
+
+      {children && <div className="mt-1">{children}</div>}
     </div>
   );
 }
