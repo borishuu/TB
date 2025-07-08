@@ -15,7 +15,7 @@ npm install
 
 ### 3. Set environment variables
 
-Create a file at the root of the foler named `.env` and add the following entries in the file :
+Create a file at the root of the folder named `.env` and add the following contents:
 
 ```
 GEMINI_API_KEY="..."
@@ -26,13 +26,19 @@ JWT_KEY="..."
 
 ### 4. Setup database
 
+Create docker container for the database:
+
 ```bash
 docker-compose up -d
 ```
 
+Install pgvector extension on the database:
+
 ```bash
 docker exec -it evagen-db psql -U admin -d db -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
+
+Create database from the schema and generate client:
 
 ```bash
 npx prisma db push
@@ -47,4 +53,4 @@ Run the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit: [http://localhost:3000](http://localhost:3000)
