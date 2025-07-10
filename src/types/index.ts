@@ -42,7 +42,7 @@ export interface GenerateOptions {
 export interface GenerationResult {
     context: string;
     evaluation: string;
-    metadata?: Record<string, any>;
+    metadata: object;
 }
 
 export interface RegenerateOptions {

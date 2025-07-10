@@ -12,6 +12,7 @@
     "@google/genai": "^1.5.1",
     "@google/generative-ai": "^0.24.0",
     "@heroicons/react": "^2.2.0",
+    "@mistralai/mistralai": "^1.7.3",
     "@prisma/client": "^6.4.1",
     "bcrypt": "^5.1.1",
     "jose": "^6.0.8",
