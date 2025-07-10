@@ -3,7 +3,7 @@ import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { performance } from 'perf_hooks';
 import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
 import * as responseSchemas from './ResponseSchemas';
-import * as prompts from '../prompts';
+import * as prompts from './prompts';
 import fs from 'fs';
 import path from 'path';
 
@@ -11,7 +11,7 @@ export class GeminiHandler implements LLMHandler {
   genModel = 'models/gemini-2.5-flash';
   private static instance: GeminiHandler | null = null;
   private genAI: GoogleGenerativeAI;
-  private fileManager: GoogleAIFileManager;   
+  private fileManager: GoogleAIFileManager;
 
   private constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
@@ -65,7 +65,7 @@ export class GeminiHandler implements LLMHandler {
   } 
 
 
-  private async generateContext(uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<string> {
+  private async generateContext(uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<{context: string, contextPrompt: string}> {
     const model = this.genAI.getGenerativeModel({ model: this.genModel });
     
     const contextPrompt = this.combinePropts(prompts.contextSystemPrompt, prompts.contextUserPromptTemplate(""));
@@ -85,10 +85,10 @@ export class GeminiHandler implements LLMHandler {
       ...fileData,
     ]);
 
-    return contextResult.response.text();
+    return { context: contextResult.response.text(), contextPrompt: contextPrompt };
   }
 
-  private async generateEval(context: string, options: GenerateOptions, uploadedInspirationFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<string> {
+  private async generateEval(context: string, options: GenerateOptions, uploadedInspirationFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<{evaluation: string, evalPrompt: string}> {
     const model = this.genAI.getGenerativeModel({
       model: this.genModel,
       generationConfig: {
@@ -109,14 +109,14 @@ export class GeminiHandler implements LLMHandler {
         evalPrompt,
         ...fileData 
       ]);
-      return result.response.text();
+      return { evaluation: result.response.text(), evalPrompt: evalPrompt };
 
     } else {
       console.log("No inspiration files dtected.");
       const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(false), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, false));
 
       const result = await model.generateContent([ evalPrompt ]);
-      return result.response.text();
+      return { evaluation: result.response.text(), evalPrompt: evalPrompt };
     }
   }
 
@@ -128,19 +128,21 @@ export class GeminiHandler implements LLMHandler {
     }
 
     const contextStart = performance.now();
-    const context = await this.generateContext(uploadedFiles.filter(f => f.contextType === 'course'));
+    const { context, contextPrompt } = await this.generateContext(uploadedFiles.filter(f => f.contextType === 'course'));
     const contextEnd = performance.now();
 
     const evalStart = performance.now();
-    const evaluation = await this.generateEval(context, options, uploadedFiles.filter(f => f.contextType === 'evalInspiration'));
+    const { evaluation, evalPrompt } = await this.generateEval(context, options, uploadedFiles.filter(f => f.contextType === 'evalInspiration'));
     const evalEnd = performance.now();
 
     return {
       context,
       evaluation,
       metadata: {
+        contextPrompt: contextPrompt,
+        evalPrompt: evalPrompt,
         contextTimeMs: Math.round(contextEnd - contextStart),
-        quizTimeMs: Math.round(evalEnd - evalStart),
+        evalTimeMs: Math.round(evalEnd - evalStart),
         model: this.genModel,
       },
     };

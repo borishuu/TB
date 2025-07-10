@@ -2,6 +2,7 @@ import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
+import { MistralHandler } from '@/lib/llm/mistral/MistralHandler';
 import { LLMHandler, FileWithContext } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -13,7 +14,8 @@ export async function POST(request: NextRequest) {
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
 
-    const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
+    //const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
+    const llmHandler: LLMHandler = MistralHandler.getInstance(process.env.MISTRAL_API_KEY as string);
 
     try {
 
@@ -88,13 +90,19 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
         }
 
+        const generationMetadata = generationResult.metadata as any;
+
         const createdEval = await prisma.quiz.create({
             data: {
                 title: title,
                 content: quizJSON,
-                prompts: JSON.parse(JSON.stringify({
-                    contextPrompt: "",
-                    quizPrompt: ""
+                metadata: JSON.parse(JSON.stringify({
+                    contextPrompt: generationMetadata.contextPrompt,
+                    quizPrompt: generationMetadata.evalPrompt,
+                    planPrompt: generationMetadata.planPrompt,
+                    contextTimeMs: generationMetadata.contextTimeMs,
+                    planTimeMs: generationMetadata.planTimeMs,
+                    evalTimeMs: generationMetadata.evalTimeMs,
                 })),
                 genModel: llmHandler.genModel,
                 author: {connect: {id: userId as number}},

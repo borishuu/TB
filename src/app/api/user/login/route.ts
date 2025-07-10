@@ -26,23 +26,23 @@ export async function POST(request: NextRequest) {
         if (!isPasswordValid)
             return NextResponse.json({ error: "Email or password incorrect" }, { status: 400 });
 
-        // Create JWT token for user
-        const jwtSecret = new TextEncoder().encode(secret);
-        const token = await new SignJWT({userId: user.id})
-            .setProtectedHeader({alg: "HS256"})
-            .setExpirationTime('1h')
-            .sign(jwtSecret);
+// Create JWT token for user
+const jwtSecret = new TextEncoder().encode(secret);
+const token = await new SignJWT({userId: user.id})
+	.setProtectedHeader({alg: "HS256"})
+	.setExpirationTime('1h')
+	.sign(jwtSecret);
 
-        // Return response with JWT
-        const response = NextResponse.json({message: "Login Successful!"});
-        response.cookies.set({
-            name: "authToken",
-            value: token,
-            path: '/',
-            httpOnly: true,
-            maxAge: 3600,
-            secure: true
-        } as any);
+// Return response with JWT
+const response = NextResponse.json({message: "Login Successful!"});
+response.cookies.set({
+	name: "authToken",
+	value: token,
+	path: '/',
+	httpOnly: true,
+	maxAge: 3600,
+	secure: true
+} as any);
 
         return response;
     } catch (error) {
