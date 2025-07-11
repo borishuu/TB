@@ -34,6 +34,7 @@ export type LocalFile = {
   };
 
 export interface GenerateOptions {
+    genModel: string;
     files: FileWithContext[];
     questionTypes: string[];
     globalDifficulty: string;
@@ -46,13 +47,15 @@ export interface GenerationResult {
 }
 
 export interface RegenerateOptions {
+    genModel: string;
     prompt: string;
     question: any;
 }
 
-
-export interface LLMHandler {
-    genModel: string;
+export interface LLMGenerationHandler {
     generateEvaluation(options: GenerateOptions): Promise<GenerationResult>;
+}
+
+export interface LLMRegenerationHandler {
     regenerateQuestion(options: RegenerateOptions): Promise<string>;
 }

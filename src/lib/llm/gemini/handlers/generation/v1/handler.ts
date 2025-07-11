@@ -1,16 +1,14 @@
-/*import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { performance } from 'perf_hooks';
-import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
-import { getPrompts } from '@/lib/llm/LLMHandlerFactory';
-import * as responseSchemas from './ResponseSchemas';
-//import * as prompts from './prompts';
+import { LLMGenerationHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
+import * as responseSchemas from '@/lib/llm/gemini/ResponseSchemas';
+import { prompts } from './prompts';
 import fs from 'fs';
 import path from 'path';
 
-export class GeminiHandler implements LLMHandler {
-  genModel = 'models/gemini-2.5-flash';
-  private static instance: GeminiHandler | null = null;
+class GeminiGenerateHandler implements LLMGenerationHandler {
+  private static instance: GeminiGenerateHandler | null = null;
   private genAI: GoogleGenerativeAI;
   private fileManager: GoogleAIFileManager;
 
@@ -19,12 +17,16 @@ export class GeminiHandler implements LLMHandler {
     this.fileManager = new GoogleAIFileManager(apiKey);
   }
 
-  public static getInstance(apiKey: string): GeminiHandler {
-    if (!GeminiHandler.instance) {
-      GeminiHandler.instance = new GeminiHandler(apiKey);
+  public static getInstance(apiKey: string): GeminiGenerateHandler {
+    if (!GeminiGenerateHandler.instance) {
+      GeminiGenerateHandler.instance = new GeminiGenerateHandler(apiKey);
     }
-    return GeminiHandler.instance;
+    return GeminiGenerateHandler.instance;
   }
+
+  /*private combinePropts(systemPrompt: string, userPrompt: string): string {
+    return `${systemPrompt} \n\n ${userPrompt}`;
+  }*/
 
   private async uploadFiles(
     files: FileWithContext[]
@@ -62,8 +64,8 @@ export class GeminiHandler implements LLMHandler {
   } 
 
 
-  private async generateContext(uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[], contextPromptTemplate: any): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: this.genModel });
+  private async generateContext(options: GenerateOptions, uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[], contextPromptTemplate: any): Promise<string> {
+    const model = this.genAI.getGenerativeModel({ model: options.genModel });
     
     //const contextPrompt = this.combinePropts(prompts.contextSystemPrompt, prompts.contextUserPromptTemplate(""));
 
@@ -87,7 +89,7 @@ export class GeminiHandler implements LLMHandler {
 
   private async generateEval(context: string, options: GenerateOptions, uploadedInspirationFiles: { uri: string; mimeType: string, contextType: ContextType }[], evalPromptTemplate: any): Promise<string> {
     const model = this.genAI.getGenerativeModel({
-      model: this.genModel,
+      model: options.genModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: responseSchemas.evalSchema,
@@ -124,12 +126,11 @@ export class GeminiHandler implements LLMHandler {
       console.log("Inspiration files detected, using with context prompt.");
     }
 
-    const generationPrompts = await getPrompts('gemini', 'generation', 'v1');
-    const contextPromptTemplate = generationPrompts.contextPromptTemplate;
-    const evalPromptTemplate = generationPrompts.evalPromptTemplate;
+    const contextPromptTemplate = prompts.contextPromptTemplate;
+    const evalPromptTemplate = prompts.evalPromptTemplate;
 
     const contextStart = performance.now();
-    const context= await this.generateContext(uploadedFiles.filter(f => f.contextType === 'course'), contextPromptTemplate);
+    const context = await this.generateContext(options, uploadedFiles.filter(f => f.contextType === 'course'), contextPromptTemplate);
     const contextEnd = performance.now();
 
     const evalStart = performance.now();
@@ -143,28 +144,12 @@ export class GeminiHandler implements LLMHandler {
         generationPromptVersion: 'v1',
         contextTimeMs: Math.round(contextEnd - contextStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
-        model: this.genModel,
+        model: options.genModel,
       },
     };
   }
+}
 
-  async regenerateQuestion(options: RegenerateOptions) {
-    //const questionRegenPrompt = this.combinePropts(prompts.regenQuestionSystemPrompt, prompts.regenQuestionUserPrompt(options.question, options.prompt));
-    const regenerationPrompts = await getPrompts('gemini', 'regeneration', 'v1');
-
-    const regenModel = this.genAI.getGenerativeModel({
-        model: this.genModel,
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: responseSchemas.questionSchema
-        }
-    });
-
-    const result = await regenModel.generateContent([
-      regenerationPrompts.regenQuestionPromptTemplate(options.question, options.prompt)
-    ]);
-
-    return result.response.text();
-  }
-}*/
-
+export const getHandlerInstance = (apiKey: string): GeminiGenerateHandler => {
+  return GeminiGenerateHandler.getInstance(apiKey);
+}

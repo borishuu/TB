@@ -1,26 +1,23 @@
-/*import { Mistral } from '@mistralai/mistralai';
+import { Mistral } from '@mistralai/mistralai';
 import { performance } from 'perf_hooks';
-import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
-import * as prompts from '@/lib/llm/mistral/prompts';
+import { LLMGenerationHandler, GenerateOptions, GenerationResult, FileWithContext } from '@/types';
+import { prompts } from './prompts';
 import pdfParse from 'pdf-parse';
-import fs from 'fs';
-import path from 'path';
-//import { deepSanitize } from '@/utils/deepSanitize';
 
-export class MistralHandler implements LLMHandler {
+class MistralGenerationHandler implements LLMGenerationHandler {
   genModel = 'codestral-2501';
-  private static instance: MistralHandler | null = null;
+  private static instance: MistralGenerationHandler | null = null;
   private mistral: Mistral;
 
   private constructor(apiKey: string) {
     this.mistral = new Mistral({ apiKey });
   }
 
-  public static getInstance(apiKey: string): MistralHandler {
-    if (!MistralHandler.instance) {
-      MistralHandler.instance = new MistralHandler(apiKey);
+  public static getInstance(apiKey: string): MistralGenerationHandler {
+    if (!MistralGenerationHandler.instance) {
+        MistralGenerationHandler.instance = new MistralGenerationHandler(apiKey);
     }
-    return MistralHandler.instance;
+    return MistralGenerationHandler.instance;
   }
 
   private async parsePDF(file: File): Promise<string> {
@@ -49,7 +46,7 @@ export class MistralHandler implements LLMHandler {
     return contents.join('\n\n---\n\n');
   }
 
-  private async generateContext(combinedContent: string): Promise<{ context: string; contextPrompt: string }> {
+  private async generateContext(combinedContent: string): Promise<string> {
     const contextPrompt = prompts.contextUserPromptTemplate(combinedContent);
 
     const response = await this.mistral.chat.complete({
@@ -57,7 +54,7 @@ export class MistralHandler implements LLMHandler {
       messages: [
         {
           role: 'system',
-          content: prompts.contextSystemPrompt
+          content: prompts.contextSystemPromptTemplate()
         },
         {
           role: 'user',
@@ -66,10 +63,10 @@ export class MistralHandler implements LLMHandler {
       ]
     });
 
-    return { context: response.choices[0].message.content as string, contextPrompt: prompts.contextUserPromptTemplate("") };
+    return response.choices[0].message.content as string;
   }
 
-  private async generateEval(context: string, options: GenerateOptions): Promise<{ evaluation: string; evalPrompt: string }> {
+  private async generateEval(context: string, options: GenerateOptions): Promise<string> {
     const evalPrompt = prompts.evalUserPromptTemplate(
       context,
       false
@@ -80,7 +77,7 @@ export class MistralHandler implements LLMHandler {
       messages: [
         {
           role: 'system',
-          content: prompts.evalSystemPrompt(false, options.globalDifficulty, options.questionTypes)
+          content: prompts.evalSystemPromptTemplate(false, options.globalDifficulty, options.questionTypes)
         },
         {
           role: 'user',
@@ -90,22 +87,19 @@ export class MistralHandler implements LLMHandler {
       responseFormat: { type: 'json_object' }
     });
 
-    return { evaluation: response.choices[0].message.content as string, evalPrompt: prompts.evalUserPromptTemplate(
-      "",
-      false
-    ) };
+    return response.choices[0].message.content as string;
   }
 
   async generateEvaluation(options: GenerateOptions): Promise<GenerationResult> {
     const contextStart = performance.now();
 
     const combinedContent = await this.prepareCourseContent(options.files);
-    const { context, contextPrompt } = await this.generateContext(combinedContent);
+    const context = await this.generateContext(combinedContent);
 
     const contextEnd = performance.now();
 
     const evalStart = performance.now();
-    const { evaluation, evalPrompt } = await this.generateEval(context, options);
+    const evaluation = await this.generateEval(context, options);
     const evalEnd = performance.now();
 
     console.log(options.globalDifficulty);
@@ -115,34 +109,15 @@ export class MistralHandler implements LLMHandler {
       context,
       evaluation,
       metadata: {
-        contextPrompt,
-        evalPrompt,
+        generationPromptVersion: 'v5',
         contextTimeMs: Math.round(contextEnd - contextStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
         model: this.genModel,
       },
     };
   }
-
-  async regenerateQuestion(options: RegenerateOptions): Promise<string> {
-    const regenPrompt = prompts.regenQuestionUserPrompt(options.question, options.prompt);
-
-    const response = await this.mistral.chat.complete({
-      model: this.genModel,
-      messages: [
-        {
-          role: 'system',
-          content: prompts.regenQuestionSystemPrompt
-        },
-        {
-          role: 'user',
-          content: regenPrompt
-        }
-      ],
-      responseFormat: { type: 'json_object' }
-    });
-
-    return response.choices[0].message.content as string;
-  }
 }
-*/
+
+export const getHandlerInstance = (apiKey: string): MistralGenerationHandler => {
+  return MistralGenerationHandler.getInstance(apiKey);
+}
