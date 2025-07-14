@@ -7,50 +7,36 @@ git clone https://github.com/borishuu/TB.git
 cd TB
 ```
 
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Set environment variables
+### 2. Set environment variables
 
 Create a file at the root of the folder named `.env` and add the following contents:
 
 ```
 GEMINI_API_KEY="..."
 MISTRAL_API_KEY="..."
-DATABASE_URL="postgresql://admin:admin@localhost:5432/db?schema=public"
+DATABASE_URL="postgresql://admin:admin@db:5432/db?schema=public"
 JWT_KEY="..."
 ```
 
-### 4. Setup database
+### 3. Run the app
 
-Create docker container for the database:
-
-```bash
-docker-compose up -d
-```
-
-Install pgvector extension on the database:
+Run the following command:
 
 ```bash
-docker exec -it evagen-db psql -U admin -d db -c "CREATE EXTENSION IF NOT EXISTS vector;"
+docker-compose up --build
 ```
 
-Create database from the schema and generate client:
+Once the containers are running, visit:
 
-```bash
-npx prisma db push
-npx prisma generate
+[http://localhost:3000](http://localhost:3000)
+
+
+### Optional: Change the exposed port
+By default the app runs on port `3000`. You may change the host port by editing the `docker-compose.yml` file:
+
+```yml
+services:
+  app:
+    ports:
+      - "3001:3000"  # host:container
 ```
-
-### 5. Run the app
-
-Run the development server:
-
-```bash
-npm run dev
-```
-
-Visit: [http://localhost:3000](http://localhost:3000)

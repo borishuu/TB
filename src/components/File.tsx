@@ -5,7 +5,7 @@ import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import { PoolFile } from '@/types';
 
-export default function File({ file, onDelete }: { file: PoolFile; onDelete?: (id: number) => void }) {
+export default function File({ file, onDelete }: { file: PoolFile; onDelete: (id: number) => void }) {
   const router = useRouter();
 
   return (

@@ -1,19 +1,24 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
-import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
-import { LLMHandler, FileWithContext } from '@/types';
+//import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
+//import { MistralHandler } from '@/lib/llm/mistral/MistralHandler';
+import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
+import { FileWithContext } from '@/types';
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
     const title = form.get('title') as string;
     const contentFiles = form.getAll("contentFiles") as File[];
-    const contentFilesMeta = form.get("contentFilesMeta") as string;
+    const contentFilesMeta = form.get("contentFilesMeta") as string; 
     const globalDifficulty = form.get("difficulty") as string;
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
+    const model = form.get("model") as string;
+    const prompts = form.get("prompts") as string;
 
-    const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
+    //const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
+    //const llmHandler: LLMHandler = MistralHandler.getInstance(process.env.MISTRAL_API_KEY as string);
 
     try {
 
@@ -40,6 +45,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "At least one question type must be provided" }, { status: 400 });
         }
 
+        if (!model) {
+            console.log("Model not provided, using default");
+            return NextResponse.json({ error: "Model must be provided" }, { status: 400 });
+        }
+
+        if (!prompts) {
+            console.log("Prompts not provided");
+            return NextResponse.json({ error: "Prompts must be provided" }, { status: 400 });
+        }
+
         // Parse local file metadata
         let parsedMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
         try {
@@ -47,6 +62,8 @@ export async function POST(request: NextRequest) {
         } catch (e) {
             return NextResponse.json({ error: 'Invalid contentFilesMeta JSON' }, { status: 400 });
         }
+
+        const generationHandler = await getGenerationHandler(model, prompts);
 
         // TODO: Handle pool files context types
         let poolFiles: { fileName: string, filePath: string, mimeType: string }[] = [];
@@ -76,7 +93,7 @@ export async function POST(request: NextRequest) {
             } as FileWithContext))
         ];
 
-        const generationResult = await llmHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty });
+        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, genModel: model });
      
 
         // Ensure quizText is valid JSON before saving
@@ -92,11 +109,8 @@ export async function POST(request: NextRequest) {
             data: {
                 title: title,
                 content: quizJSON,
-                prompts: JSON.parse(JSON.stringify({
-                    contextPrompt: "",
-                    quizPrompt: ""
-                })),
-                genModel: llmHandler.genModel,
+                metadata: generationResult.metadata,
+                genModel: model,
                 author: {connect: {id: userId as number}},
             },
         });

@@ -26,7 +26,7 @@ model Quiz {
   title     String
   content   Json?
   createdAt DateTime @default(now())
-  prompts   Json?
+  metadata   Json?
   genModel  String?
   authorId  Int
   author    User   @relation(fields: [authorId], references: [id])

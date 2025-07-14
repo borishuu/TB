@@ -12,12 +12,28 @@ export default function CreateQuiz() {
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [files, setFiles] = useState<LocalFile[]>([]);
   const [suggestedFiles, setSuggestedFiles] = useState<PoolFile[]>([]);
+  const [modelKey, setModelKey] = useState('gemini 2.5 flash');
+  const [prompts, setPrompts] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [localDragActive, setLocalDragActive] = useState(false);
   const localInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
+
+  const models: Record<string, { model: string; prompts: string[] }>  = {
+    'gemini 2.5 flash': {
+      model: 'models/gemini-2.5-flash',
+      prompts: ['v1'],
+    },
+    'codestral': {
+      model: 'codestral-2501',
+      prompts: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'],
+    },
+  };
+
+  const availablePrompts = models[modelKey]?.prompts || [];
+  const model = models[modelKey]?.model || '';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,15 +44,17 @@ export default function CreateQuiz() {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('topics', topics);
-      formData.append('difficulty', difficulty);      
+      formData.append('difficulty', difficulty);
+      formData.append('model', model);   
+      formData.append('prompts', prompts);
       questionTypes.forEach((type) => formData.append('questionTypes', type));
       suggestedFiles.forEach((file) => formData.append('suggestedFileIds', String(file.id)));
 
       files.forEach((file) => formData.append('contentFiles', file.file));
-      const fileMetadata = files.map((localFile, _) => ({
+      const fileMetadata = files.map((localFile) => ({
         name: localFile.file.name,
         contextType: localFile.contextType,
-      }));      
+      }));
       formData.append('contentFilesMeta', JSON.stringify(fileMetadata));
 
       const response = await fetch('/api/eval', {
@@ -77,7 +95,6 @@ export default function CreateQuiz() {
 
   const addFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
-    //setFiles((prev) => [...prev, ...Array.from(newFiles)]);
     const wrappedFiles: LocalFile[] = Array.from(newFiles).map((file) => ({
       file,
       contextType: 'course',
@@ -121,10 +138,6 @@ export default function CreateQuiz() {
     );
   };
 
-  const changePoolFileContextType = (id: number) => {
-    //setSuggestedFiles((prev) => prev.filter((file) => file.id !== id));
-  };
-
   const toggleQuestionType = (type: string) => {
     setQuestionTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
@@ -158,18 +171,6 @@ export default function CreateQuiz() {
             />
           </div>
 
-          {/* Topics */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Sujets</label>
-            <textarea
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Indiquez les sujets à aborder (ex: récursivité, typage...)"
-              rows={4}
-              value={topics}
-              onChange={(e) => setTopics(e.target.value)}
-            />
-          </div>
-
           {/* Difficulty */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Difficulté globale</label>
@@ -183,6 +184,44 @@ export default function CreateQuiz() {
               <option value="medium">Moyen</option>
               <option value="hard">Difficile</option>
               <option value="very_hard">Très difficile</option>
+            </select>
+          </div>
+
+          {/* LLM Model */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Modèle LLM</label>
+            <select
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={modelKey}
+              onChange={(e) => {
+                setModelKey(e.target.value);
+                setPrompts('');
+              }}
+            >
+              {Object.keys(models).map((key) => (
+                <option key={key} value={key}>
+                  {key}
+                </option>)
+              )}
+
+            </select>
+          </div>
+
+          {/* Prompting */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Types de promps</label>
+            <select
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={prompts}
+              onChange={(e) => setPrompts(e.target.value)}
+              disabled={availablePrompts.length === 0}
+            >
+              <option value="">Sélectionnez un type de prompt</option>
+              {availablePrompts.map((prompt) => (
+                <option key={prompt} value={prompt}>
+                  {prompt}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -204,6 +243,18 @@ export default function CreateQuiz() {
             </div>
           </div>
 
+          {/* Topics */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Sujets</label>
+            <textarea
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Indiquez les sujets à aborder (ex: récursivité, typage...)"
+              rows={4}
+              value={topics}
+              onChange={(e) => setTopics(e.target.value)}
+            />
+          </div>
+
           {/* Suggested Files */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers depuis mon pool</label>
@@ -214,6 +265,7 @@ export default function CreateQuiz() {
             >
               Chercher fichiers correspondants
             </button>
+            <p className='text-red-500'>Fichiers de pool seront pas passés comme fichiers d'inspiration</p>
             <div className="border-2 border-dashed rounded-lg p-4 text-center border-gray-300">
               <p className="text-gray-500">
                 Recherche automatique depuis les sujets donnés, ou{' '}
@@ -226,7 +278,7 @@ export default function CreateQuiz() {
                       <FileWithCheckbox
                         file={file}
                         onDelete={() => removeSuggestedFile(file.id)}
-                        onCheckboxChange={() => changePoolFileContextType(file.id)}
+                        onCheckboxChange={() => {}}
                       />
                     </div>
                   ))}
@@ -284,7 +336,7 @@ export default function CreateQuiz() {
           <button
             type="submit"
             className="w-full button"
-            disabled={loading}
+            disabled={loading || !prompts}
           >
             {loading ? 'Génération...' : 'Générer'}
           </button>

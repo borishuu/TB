@@ -9,7 +9,30 @@ services:
     ports:
       - '5432:5432'
     volumes:
+      # Mount the initialization script to auto-create the vector extension
+      - ./init-db:/docker-entrypoint-initdb.d
+      # Persist database data
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: evagen-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "./entrypoint.sh"
 
 volumes:
   pgdata:

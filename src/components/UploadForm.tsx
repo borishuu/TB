@@ -1,26 +1,32 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { Course } from '@/types';
+import CourseDropdown from '@/components/CourseDropdown';
 
 interface UploadFormProps {
   onClose: () => void;
   onSuccess: (newFiles: any[]) => void;
+  courses: Course[];
 }
 
-export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
+export default function UploadForm({ onClose, onSuccess, courses }: UploadFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<number | ''>('');
+  const [newCourseName, setNewCourseName] = useState('');
+  const [localCourses, setLocalCourses] = useState<Course[]>(courses);
 
   const handleFilesUpload = async () => {
-    if (!uploadFiles /*|| !selectedCourse*/) return;
+    if (!uploadFiles.length || !selectedCourse) {
+      console.error('Please select a course and add files');
+      return;
+    }
 
     const formData = new FormData();
-    Array.from(uploadFiles).forEach((file) => {
-      formData.append('files', file);
-    });
-    formData.append('course', selectedCourse);
+    uploadFiles.forEach((file) => formData.append('files', file));
+    formData.append('courseId', String(selectedCourse));
 
     try {
       const res = await fetch('/api/file', {
@@ -30,7 +36,7 @@ export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
 
       if (res.ok) {
         const updatedFiles = await res.json();
-        //onSuccess(updatedFiles);
+        onSuccess(updatedFiles);
         onClose();
       } else {
         console.error('Upload failed');
@@ -52,27 +58,20 @@ export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    //handleFilesUpload(e.dataTransfer.files);
     addFiles(e.dataTransfer.files);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    /*if (e.target.files) {
-      setUploadFiles([...uploadFiles, ...Array.from(e.target.files)]);
-    }*/
     addFiles(e.target.files);
   };
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
-    //if (files.length === 0) return;
-    //const newFiles = Array.from(files).filter((file) => !uploadFiles.includes(file));
-    setUploadFiles([...uploadFiles, ...Array.from(files)]);
-  }
+    setUploadFiles((prev) => [...prev, ...Array.from(files)]);
+  };
 
   const removeFile = (index: number) => {
-    setUploadFiles(uploadFiles.filter((_, i) => i !== index));
-    // Reset input value so same file can be added again
+    setUploadFiles((prev) => prev.filter((_, i) => i !== index));
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -88,13 +87,15 @@ export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
       <h2 className="text-lg font-semibold mb-4">Uploader un fichier</h2>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Cours</label>
-        <input
-          type="text"
+        <CourseDropdown
+          courses={localCourses}
           value={selectedCourse}
-          onChange={(e) => setSelectedCourse(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          placeholder="Nom du cours (ex: HPC)"
+          newCourseName={newCourseName}
+          onChange={(selected, newName) => {
+            setSelectedCourse(selected);
+            setNewCourseName(newName);
+          }}
+          setCourses={setLocalCourses}
         />
       </div>
 
@@ -112,7 +113,6 @@ export default function UploadForm({ onClose, onSuccess }: UploadFormProps) {
           type="file"
           multiple
           className="hidden"
-          //onChange={(e) => setUploadFiles(e.target.files)}
           onChange={handleFileChange}
         />
         <p className="text-gray-500">

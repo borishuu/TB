@@ -21,6 +21,11 @@ export interface PoolFile {
     filePath?: string;
 }
 
+export interface Course {
+    id: number;
+    courseName: string;
+}
+
 export type ContextType = 'evalInspiration' | 'course';
 
 export type LocalFile = {
@@ -28,12 +33,13 @@ export type LocalFile = {
     contextType: ContextType;
  };
 
- export type FileWithContext = {
+export type FileWithContext = {
     file: File | { fileName: string; filePath: string; mimeType: string };
     contextType: ContextType;
-  };
+};
 
 export interface GenerateOptions {
+    genModel: string;
     files: FileWithContext[];
     questionTypes: string[];
     globalDifficulty: string;
@@ -42,17 +48,19 @@ export interface GenerateOptions {
 export interface GenerationResult {
     context: string;
     evaluation: string;
-    metadata?: Record<string, any>;
+    metadata: object;
 }
 
 export interface RegenerateOptions {
+    genModel: string;
     prompt: string;
     question: any;
 }
 
-
-export interface LLMHandler {
-    genModel: string;
+export interface LLMGenerationHandler {
     generateEvaluation(options: GenerateOptions): Promise<GenerationResult>;
+}
+
+export interface LLMRegenerationHandler {
     regenerateQuestion(options: RegenerateOptions): Promise<string>;
 }

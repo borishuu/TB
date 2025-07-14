@@ -2,7 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
+//import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
+import { getRegenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -44,9 +45,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: "Question not found" }, { status: 404 });
         }
 
-        const llmHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
+        const llmHandler = await getRegenerationHandler('models/gemini-2.5-flash', 'v1');
 
-        const newQuestion = await llmHandler.regenerateQuestion({ prompt, question: currentContent[questionIndex] });
+        const newQuestion = await llmHandler.regenerateQuestion({ genModel: 'models/gemini-2.5-flash', prompt, question: currentContent[questionIndex] });
 
         if (!newQuestion) {
             return NextResponse.json({ error: "Failed to generate new question" }, { status: 500 });
