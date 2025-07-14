@@ -3,9 +3,14 @@
 import { useState } from 'react';
 import File from '@/components/File';
 import UploadForm from '@/components/UploadForm';
-import { PoolFile } from '@/types';
+import { PoolFile, Course } from '@/types';
 
-export default function FilesDashboardClient({ files: initialFiles }: { files: PoolFile[] }) {
+interface FilesDashboardClientProps {
+  files: PoolFile[];
+  courses: Course[];
+}
+
+export default function FilesDashboardClient({ files: initialFiles, courses }: FilesDashboardClientProps) {
   const [files, setFiles] = useState(initialFiles);
   const [expandedCourses, setExpandedCourses] = useState<Record<string, boolean>>({});
   const [showModal, setShowModal] = useState(false);
@@ -16,6 +21,24 @@ export default function FilesDashboardClient({ files: initialFiles }: { files: P
     acc[courseName].push(file);
     return acc;
   }, {});
+
+  const handleDeleteFile = async (id: number) => {
+    try {
+      const res = await fetch(`/api/file/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        console.error('Failed to delete file');
+        return;
+      }
+
+      // Remove the file from the state
+      setFiles((prev) => prev.filter((file) => file.id !== id));
+    } catch (error) {
+      console.error('Error deleting file:', error);
+    }
+  };
 
   return (
     <div className="relative max-w-full mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -49,7 +72,7 @@ export default function FilesDashboardClient({ files: initialFiles }: { files: P
               {expandedCourses[course] && (
                 <div className="flex flex-wrap gap-4 mt-3 px-2">
                   {courseFiles.map((file) => (
-                    <File key={file.id} file={file} />
+                    <File key={file.id} file={file} onDelete={handleDeleteFile} />
                   ))}
                 </div>
               )}
@@ -64,7 +87,8 @@ export default function FilesDashboardClient({ files: initialFiles }: { files: P
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <UploadForm
             onClose={() => setShowModal(false)}
-            onSuccess={(newFiles: PoolFile[]) => setFiles(newFiles)}
+            onSuccess={(newFiles: PoolFile[]) => setFiles((prev) => [...prev, ...newFiles])}
+            courses={courses}
           />
         </div>
       )}

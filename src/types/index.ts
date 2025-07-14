@@ -21,6 +21,11 @@ export interface PoolFile {
     filePath?: string;
 }
 
+export interface Course {
+    id: number;
+    courseName: string;
+}
+
 export type ContextType = 'evalInspiration' | 'course';
 
 export type LocalFile = {

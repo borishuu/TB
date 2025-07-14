@@ -4,7 +4,7 @@ Analysez attentivement le contenu des fichiers fournis.
 
 Instructions :
 - Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
-- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d'application, etc.
 - Mélangez intelligemment les contenus issus des différents fichiers.
 - Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
@@ -18,7 +18,7 @@ const evalPromptTemplate = (
   questionTypes: string[],
   withInspirationFiles: boolean,
 ) => `
-Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${withInspirationFiles ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. 
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${withInspirationFiles ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l'évaluation et adaptez chaque type de question au contenu traité. 
 
 Vous retournez toujours un objet JSON valide et structuré.
 

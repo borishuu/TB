@@ -132,25 +132,25 @@ class MistralGenerationHandler implements LLMGenerationHandler {
   async generateEvaluation(options: GenerateOptions): Promise<GenerationResult> {
     const contextStart = performance.now();
 
-    // Étape 1 : Préparer le contexte
+    // Préparer le contexte
     const combinedContent = await this.prepareCourseContent(options.files);
     const context = await this.generateContext(combinedContent);
     console.log("Context generated:", context);
     const contextEnd = performance.now();
 
-    // Étape 2 : Générer le plan
+    // Générer le plan
     const planStart = performance.now();
     const plan = await this.generateEvalPlan(context, options);
     console.log("Plan generated:", plan);
     const planEnd = performance.now();
 
-    // Étape 3 : Générer l'évaluation finale
+    // Générer l'évaluation finale
     const evalStart = performance.now();
     const evaluation = await this.generateEvalFromPlan(plan, context, options);
     const evalEnd = performance.now();
     console.log("Evaluation generated:", evaluation);
 
-    // Étape 4 : Corriger l'évaluation finale
+    // Corriger l'évaluation finale
     const correctionStart = performance.now();
     const correctedEvaluation= await this.correctEval(evaluation, context, options);
     const correctionEnd = performance.now();
