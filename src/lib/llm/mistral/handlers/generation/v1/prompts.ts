@@ -17,8 +17,8 @@ Instructions :
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
 `;
 
-const evalSystemPromptTemplate = (withInspirationFiles: boolean) => `
-Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${withInspirationFiles ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. 
+const evalSystemPromptTemplate = (combinedInspirationContent: string) => `
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l'évaluation et adaptez chaque type de question au contenu traité. 
 
 Vous retournez toujours un objet JSON valide et structuré.
 `;
@@ -27,7 +27,7 @@ const evalUserPromptTemplate = (
   contextText: string,
   globalDifficulty: string,
   questionTypes: string[],
-  withInspirationFiles: boolean,
+  combinedInspirationContent: string,
 ) => `
 Générez une évaluation basée sur le contexte suivant :
 
@@ -82,8 +82,9 @@ Exemple :
   ]
 }
 
-${withInspirationFiles ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+${combinedInspirationContent !== "" ? `
+Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+${combinedInspirationContent}
 ` : ''}
 
 Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.

@@ -24,10 +24,6 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
     return GeminiGenerateHandler.instance;
   }
 
-  /*private combinePropts(systemPrompt: string, userPrompt: string): string {
-    return `${systemPrompt} \n\n ${userPrompt}`;
-  }*/
-
   private async uploadFiles(
     files: FileWithContext[]
   ): Promise<{ uri: string; mimeType: string, contextType: ContextType }[]> {
@@ -66,18 +62,12 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
 
   private async generateContext(options: GenerateOptions, uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[], contextPromptTemplate: any): Promise<string> {
     const model = this.genAI.getGenerativeModel({ model: options.genModel });
-    
-    //const contextPrompt = this.combinePropts(prompts.contextSystemPrompt, prompts.contextUserPromptTemplate(""));
 
-    //console.log("Generating context with prompt:", contextPrompt);
-    //console.log("Files to upload:", courseFiles.map(f => f.file instanceof File ? f.file.name : f.file.fileName));
 
     const fileData = uploadedCourseFiles.map((r) => ({ fileData: { 
       fileUri: r.uri, 
       mimeType: r.mimeType },
     }))
-
-    //console.log("Uploaded files:", fileData);
 
     const contextResult = await model.generateContent([
       contextPromptTemplate(),

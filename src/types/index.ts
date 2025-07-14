@@ -33,10 +33,10 @@ export type LocalFile = {
     contextType: ContextType;
  };
 
- export type FileWithContext = {
+export type FileWithContext = {
     file: File | { fileName: string; filePath: string; mimeType: string };
     contextType: ContextType;
-  };
+};
 
 export interface GenerateOptions {
     genModel: string;

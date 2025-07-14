@@ -265,6 +265,7 @@ export default function CreateQuiz() {
             >
               Chercher fichiers correspondants
             </button>
+            <p className='text-red-500'>Fichiers de pool seront pas passés comme fichiers d'inspiration</p>
             <div className="border-2 border-dashed rounded-lg p-4 text-center border-gray-300">
               <p className="text-gray-500">
                 Recherche automatique depuis les sujets donnés, ou{' '}

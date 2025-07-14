@@ -9,7 +9,7 @@ ${combinedFileContent}
 
 Instructions :
 - Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
-- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d’application, etc.
+- Pour chaque notion ou sujet important, incluez les informations pertinentes associées : définitions, explications, exemples, contextes d'application, etc.
 - Mélangez intelligemment les contenus issus des différents fichiers.
 - Mettez en avant les éléments particulièrement utiles pour la génération d'évaluations (concepts, procédures, points de difficulté, distinctions à connaître).
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
@@ -17,9 +17,12 @@ Instructions :
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
 `;
 
-const evalSystemPromptTemplate = (withInspirationFiles: boolean, globalDifficulty: string,
-    questionTypes: string[]) => `
-Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${withInspirationFiles ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. 
+const evalSystemPromptTemplate = (
+  combinedInspirationContent: string, 
+  globalDifficulty: string,
+  questionTypes: string[]
+) => `
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l'évaluation et adaptez chaque type de question au contenu traité. 
 
 Instructions :
 - Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
@@ -33,13 +36,13 @@ Instructions :
 - **Les questions d'écriture de code doivent fournir des exemples de résultats ou de comportements attendus.**
     - Voici un exemple de question d'écriture de code attendu :
         **
-        Dans le cadre d’une application de gestion des sessions, on récolte des valeurs mesurées
-        progressivement dans le temps. Un \`Record\` représente l’enregistrement d’une valeur (existante ou
+        Dans le cadre d'une application de gestion des sessions, on récolte des valeurs mesurées
+        progressivement dans le temps. Un \`Record\` représente l'enregistrement d'une valeur (existante ou
         non) à un temps précis.
         Implémenter la fonction sessionWindow, qui prend en paramètre
             — ll : une LazyList[Record] contenant des valeurs mesurées progressivement dans le
             temps, et
-            — maxGap : l’intervalle de temps maximum permis entre deux sessions successives.
+            — maxGap : l'intervalle de temps maximum permis entre deux sessions successives.
 
         et qui retourne
             — une LazyList[List[Record]] contenant les sessions regroupés.
@@ -91,13 +94,13 @@ Exemple :
 
 const evalUserPromptTemplate = (
   contextText: string,
-  withInspirationFiles: boolean,
+  combinedInspirationContent: string,
 ) => `
 Générez une évaluation basée sur le contexte suivant :
 
 ${contextText}
 
-${withInspirationFiles ? `
+${combinedInspirationContent !== "" ? `
 Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
 ` : ''}
 `;

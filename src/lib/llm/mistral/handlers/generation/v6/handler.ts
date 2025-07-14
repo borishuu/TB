@@ -3,9 +3,9 @@ import { performance } from 'perf_hooks';
 import { LLMGenerationHandler, GenerateOptions, GenerationResult, FileWithContext } from '@/types';
 import { prompts } from './prompts';
 import pdfParse from 'pdf-parse';
+import fs from 'fs/promises';
 
 class MistralGenerationHandler implements LLMGenerationHandler {
-  genModel = 'codestral-2501';
   private static instance: MistralGenerationHandler | null = null;
   private mistral: Mistral;
 
@@ -27,30 +27,36 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     return parsed.text;
   }
 
-  private async prepareCourseContent(files: FileWithContext[]): Promise<string> {
-    const courseFiles = files.filter(f => f.contextType === 'course');
-    const contents: string[] = [];
-
-    for (const fileObj of courseFiles) {
-      if (fileObj.file instanceof File) {
+    private async combineFileContents(files: FileWithContext[]): Promise<string> {
+      const contents: string[] = [];
+  
+      for (const fileObj of files) {
         try {
-          const text = await this.parsePDF(fileObj.file);
-          contents.push(`Fichier: ${fileObj.file.name}\n\n${text}`);
+          if (fileObj.file instanceof File) {
+            // Local file
+            const text = await this.parsePDF(fileObj.file);
+            contents.push(`Fichier: ${fileObj.file.name}\n\n${text}`);
+          } else {
+            // Pool file
+            const buffer = await fs.readFile(fileObj.file.filePath);
+            const parsed = await pdfParse(buffer);
+            contents.push(`Fichier: ${fileObj.file.fileName}\n\n${parsed.text}`);
+          }
         } catch (err) {
-          console.warn(`Failed to parse PDF ${fileObj.file.name}:`, err);
-          throw new Error(`Failed to parse PDF file: ${fileObj.file.name}`);
+          const fileName = fileObj.file instanceof File ? fileObj.file.name : fileObj.file.fileName;
+          console.warn(`Failed to parse PDF ${fileName}:`, err);
+          throw new Error(`Failed to parse PDF file: ${fileName}`);
         }
       }
+  
+      return contents.join('\n\n---\n\n');
     }
 
-    return contents.join('\n\n---\n\n');
-  }
-
-  private async generateContext(combinedContent: string): Promise<string> {
+  private async generateContext(options: GenerateOptions, combinedContent: string): Promise<string> {
     const contextPrompt = prompts.contextUserPromptTemplate(combinedContent);
 
     const response = await this.mistral.chat.complete({
-      model: this.genModel,
+      model: options.genModel,
       messages: [
         {
           role: 'system',
@@ -66,15 +72,15 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     return response.choices[0].message.content as string;
   }
 
-  private async generateEvalPlan(context: string, options: GenerateOptions): Promise<string> {
-    const planPrompt = prompts.evalPlanificiationUserPromptTemplate(context);
+  private async generateEvalPlan(options: GenerateOptions, context: string, combinedInspirationContent: string): Promise<string> {
+    const planPrompt = prompts.evalPlanificiationUserPromptTemplate(context, combinedInspirationContent);
 
     const response = await this.mistral.chat.complete({
-      model: this.genModel,
+      model: options.genModel,
       messages: [
         {
           role: 'system',
-          content: prompts.evalPlanificiationSystemPromptTemplate(options.globalDifficulty, options.questionTypes, false)
+          content: prompts.evalPlanificiationSystemPromptTemplate(options.globalDifficulty, options.questionTypes, combinedInspirationContent)
         },
         {
           role: 'user',
@@ -87,15 +93,15 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     return response.choices[0].message.content as string;
   }
 
-  private async generateEvalFromPlan(planJSON: string, conxtextText: string, options: GenerateOptions): Promise<string> {
-    const evalPrompt = prompts.evalUserPromptTemplate(planJSON, conxtextText, false);
+  private async generateEvalFromPlan(options: GenerateOptions, planJSON: string, conxtextText: string, combinedInspirationContent: string): Promise<string> {
+    const evalPrompt = prompts.evalUserPromptTemplate(planJSON, conxtextText, combinedInspirationContent);
 
     const response = await this.mistral.chat.complete({
-      model: this.genModel,
+      model: options.genModel,
       messages: [
         {
           role: 'system',
-          content: prompts.evalSystemPromptTemplate(false)
+          content: prompts.evalSystemPromptTemplate(combinedInspirationContent)
         },
         {
           role: 'user',
@@ -109,10 +115,10 @@ class MistralGenerationHandler implements LLMGenerationHandler {
   }
 
   private async correctEval(evaluation: string, conxtextText: string, options: GenerateOptions): Promise<string> {
-    const evalPrompt = prompts.evalCorrectionUserPromptTemplate(evaluation, conxtextText, false);
+    const evalPrompt = prompts.evalCorrectionUserPromptTemplate(evaluation, conxtextText);
 
     const response = await this.mistral.chat.complete({
-      model: this.genModel,
+      model: options.genModel,
       messages: [
         {
           role: 'system',
@@ -130,25 +136,23 @@ class MistralGenerationHandler implements LLMGenerationHandler {
   }
 
   async generateEvaluation(options: GenerateOptions): Promise<GenerationResult> {
-    const contextStart = performance.now();
+    const combinedCourseContent = await this.combineFileContents(options.files.filter(f => f.contextType === 'course'));
+    const combinedInspirationContent = await this.combineFileContents(options.files.filter(f => f.contextType === 'evalInspiration'));
 
-    // Préparer le contexte
-    const combinedContent = await this.prepareCourseContent(options.files);
-    const context = await this.generateContext(combinedContent);
-    console.log("Context generated:", context);
-    const contextEnd = performance.now();
+    // Prepare context
+    const contextStart = performance.now();    
+    const context = await this.generateContext(options, combinedCourseContent);
+    const contextEnd = performance.now(); 
 
-    // Générer le plan
-    const planStart = performance.now();
-    const plan = await this.generateEvalPlan(context, options);
-    console.log("Plan generated:", plan);
+    // Generate plan  
+    const planStart = performance.now();    
+    const plan = await this.generateEvalPlan(options, context, combinedInspirationContent);    
     const planEnd = performance.now();
 
-    // Générer l'évaluation finale
+    // Generate evaluation
     const evalStart = performance.now();
-    const evaluation = await this.generateEvalFromPlan(plan, context, options);
+    const evaluation = await this.generateEvalFromPlan(options, plan, context, combinedInspirationContent);
     const evalEnd = performance.now();
-    console.log("Evaluation generated:", evaluation);
 
     // Corriger l'évaluation finale
     const correctionStart = performance.now();
@@ -164,7 +168,7 @@ class MistralGenerationHandler implements LLMGenerationHandler {
         planTimeMs: Math.round(planEnd - planStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
         correctionTimeMs: Math.round(correctionEnd - correctionStart),
-        model: this.genModel,
+        model: options.genModel,
       },
     };
   }

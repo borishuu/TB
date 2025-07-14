@@ -21,9 +21,9 @@ Objectif : produire un contexte qui permettrait à une IA de recevoir le context
 const evalPlanificiationSystemPromptTemplate = (
     globalDifficulty: string,
     questionTypes: string[],
-    withInspirationFiles: boolean,    
+    combinedInspirationContent: string,     
   ) =>`
-Vous êtes un générateur d'évaluation pédagogique intelligent pour des étudiants en ingénierie. À partir d'un résumé de cours structuré, planifiez une évaluation complète.
+Vous êtes un générateur d'évaluation pédagogique intelligent pour des étudiants en ingénierie. À partir d'un résumé de cours structuré${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, planifiez une évaluation complète.
 
 Intructions :
 - Proposez un plan détaillé pour une évaluation de **10 questions**.
@@ -48,13 +48,19 @@ Intructions :
 
 const evalPlanificiationUserPromptTemplate = (
     contextText: string, 
+    combinedInspirationContent: string
   ) =>`
 Générez un plan d'évaluation basé sur le contexte suivant :
 ${contextText}
+
+${combinedInspirationContent !== "" ? `
+Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+${combinedInspirationContent}
+` : ''}
 `;
 
-const evalSystemPromptTemplate = (withInspirationFiles: boolean) => `
-Vous êtes un générateur d'évaluation intelligent pour des étudiants en ingénierie. À partir d'un plan d'évaluation donné fourni en JSON, rédigez une évaluation .
+const evalSystemPromptTemplate = (combinedInspirationContent: string) => `
+Vous êtes un générateur d'évaluation intelligent pour des étudiants en ingénierie. À partir d'un plan d'évaluation donné fourni en JSON${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, rédigez une évaluation .
 
 Instructions :
 - Rédigez la question de façon claire, précise et cohérente.
@@ -104,7 +110,7 @@ Instructions :
 const evalUserPromptTemplate = (
   planJSON: string,
   contextText: string,
-  withInspirationFiles: boolean,
+  combinedInspirationContent: string,
 ) => `
 Générez une évaluation basée sur le plan suivant :
 
@@ -113,8 +119,9 @@ ${planJSON}
 Contexte complet à prendre en compte (ne pas ignorer) :
 ${contextText}
 
-${withInspirationFiles ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+${combinedInspirationContent !== "" ? `
+Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+${combinedInspirationContent}
 ` : ''}
 `;
 
@@ -167,7 +174,6 @@ Instructions :
 const evalCorrectionUserPromptTemplate = (
   evaluation: string,
   contextText: string,
-  withInspirationFiles: boolean,
 ) => `
 Corrigez l'évaluation suivante :
 
@@ -175,10 +181,6 @@ ${evaluation}
 
 Contexte complet à prendre en compte (ne pas ignorer) :
 ${contextText}
-
-${withInspirationFiles ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
-` : ''}
 `;
 
 export const regenQuestionSystemPrompt = `

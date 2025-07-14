@@ -1,8 +1,8 @@
-export const contextSystemPromptTemplate = () => `
+const contextSystemPromptTemplate = () => `
 Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
 `;
 
-export const contextUserPromptTemplate = (combinedFileContent: string) =>`
+const contextUserPromptTemplate = (combinedFileContent: string) =>`
 Analysez attentivement le contenu des fichiers fournis.
 
 ${combinedFileContent}
@@ -17,12 +17,12 @@ Instructions :
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
 `;
 
-export const evalSystemPromptTemplate = ( 
-  withInspirationFiles: boolean, 
+const evalSystemPromptTemplate = ( 
+  combinedInspirationContent: string, 
   globalDifficulty: string,
   questionTypes: string[]
 ) => `
-Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${withInspirationFiles ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l’évaluation et adaptez chaque type de question au contenu traité. 
+Vous êtes un générateur d'évaluation intelligent. À partir d'un résumé de cours structuré${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, vous devez produire une évaluation de haut niveau. Vous maîtrisez la pédagogie par l'évaluation et adaptez chaque type de question au contenu traité. 
 
 Instructions :
 - Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
@@ -74,16 +74,17 @@ Exemple :
 }
 `;
 
-export const evalUserPromptTemplate = (
+const evalUserPromptTemplate = (
   contextText: string,
-  withInspirationFiles: boolean,
+  combinedInspirationContent: string,
 ) => `
 Générez une évaluation basée sur le contexte suivant :
 
 ${contextText}
 
-${withInspirationFiles ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+${combinedInspirationContent !== "" ? `
+Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+${combinedInspirationContent}
 ` : ''}
 `;
 
