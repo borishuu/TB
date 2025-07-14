@@ -1,15 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import { performance } from 'perf_hooks';
-import { LLMHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
-import * as responseSchemas from './ResponseSchemas';
-import * as prompts from './prompts';
+import { LLMGenerationHandler, GenerateOptions, GenerationResult, FileWithContext, ContextType, RegenerateOptions } from '@/types';
+import * as responseSchemas from '@/lib/llm/gemini/ResponseSchemas';
+import { prompts } from './prompts';
 import fs from 'fs';
 import path from 'path';
 
-export class GeminiHandler implements LLMHandler {
-  genModel = 'models/gemini-2.5-flash';
-  private static instance: GeminiHandler | null = null;
+class GeminiGenerateHandler implements LLMGenerationHandler {
+  private static instance: GeminiGenerateHandler | null = null;
   private genAI: GoogleGenerativeAI;
   private fileManager: GoogleAIFileManager;
 
@@ -18,15 +17,11 @@ export class GeminiHandler implements LLMHandler {
     this.fileManager = new GoogleAIFileManager(apiKey);
   }
 
-  public static getInstance(apiKey: string): GeminiHandler {
-    if (!GeminiHandler.instance) {
-      GeminiHandler.instance = new GeminiHandler(apiKey);
+  public static getInstance(apiKey: string): GeminiGenerateHandler {
+    if (!GeminiGenerateHandler.instance) {
+      GeminiGenerateHandler.instance = new GeminiGenerateHandler(apiKey);
     }
-    return GeminiHandler.instance;
-  }
-
-  private combinePropts(systemPrompt: string, userPrompt: string): string {
-    return `${systemPrompt} \n\n ${userPrompt}`;
+    return GeminiGenerateHandler.instance;
   }
 
   private async uploadFiles(
@@ -65,32 +60,26 @@ export class GeminiHandler implements LLMHandler {
   } 
 
 
-  private async generateContext(uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<{context: string, contextPrompt: string}> {
-    const model = this.genAI.getGenerativeModel({ model: this.genModel });
-    
-    const contextPrompt = this.combinePropts(prompts.contextSystemPrompt, prompts.contextUserPromptTemplate(""));
+  private async generateContext(options: GenerateOptions, uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[], contextPromptTemplate: any): Promise<string> {
+    const model = this.genAI.getGenerativeModel({ model: options.genModel });
 
-    //console.log("Generating context with prompt:", contextPrompt);
-    //console.log("Files to upload:", courseFiles.map(f => f.file instanceof File ? f.file.name : f.file.fileName));
 
     const fileData = uploadedCourseFiles.map((r) => ({ fileData: { 
       fileUri: r.uri, 
       mimeType: r.mimeType },
     }))
 
-    //console.log("Uploaded files:", fileData);
-
     const contextResult = await model.generateContent([
-      contextPrompt,
+      contextPromptTemplate(),
       ...fileData,
     ]);
 
-    return { context: contextResult.response.text(), contextPrompt: contextPrompt };
+    return contextResult.response.text();
   }
 
-  private async generateEval(context: string, options: GenerateOptions, uploadedInspirationFiles: { uri: string; mimeType: string, contextType: ContextType }[]): Promise<{evaluation: string, evalPrompt: string}> {
+  private async generateEval(context: string, options: GenerateOptions, uploadedInspirationFiles: { uri: string; mimeType: string, contextType: ContextType }[], evalPromptTemplate: any): Promise<string> {
     const model = this.genAI.getGenerativeModel({
-      model: this.genModel,
+      model: options.genModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: responseSchemas.evalSchema,
@@ -104,19 +93,19 @@ export class GeminiHandler implements LLMHandler {
         mimeType: r.mimeType },
       }))
       
-      const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(true), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, true));
+      //const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(true), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, true));
       const result = await model.generateContent([ 
-        evalPrompt,
+        evalPromptTemplate(context, options.globalDifficulty, options.questionTypes, true),
         ...fileData 
       ]);
-      return { evaluation: result.response.text(), evalPrompt: evalPrompt };
+      return result.response.text();
 
     } else {
       console.log("No inspiration files dtected.");
-      const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(false), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, false));
+      //const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(false), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, false));
 
-      const result = await model.generateContent([ evalPrompt ]);
-      return { evaluation: result.response.text(), evalPrompt: evalPrompt };
+      const result = await model.generateContent([ evalPromptTemplate(context, options.globalDifficulty, options.questionTypes, false) ]);
+      return result.response.text();
     }
   }
 
@@ -127,43 +116,30 @@ export class GeminiHandler implements LLMHandler {
       console.log("Inspiration files detected, using with context prompt.");
     }
 
+    const contextPromptTemplate = prompts.contextPromptTemplate;
+    const evalPromptTemplate = prompts.evalPromptTemplate;
+
     const contextStart = performance.now();
-    const { context, contextPrompt } = await this.generateContext(uploadedFiles.filter(f => f.contextType === 'course'));
+    const context = await this.generateContext(options, uploadedFiles.filter(f => f.contextType === 'course'), contextPromptTemplate);
     const contextEnd = performance.now();
 
     const evalStart = performance.now();
-    const { evaluation, evalPrompt } = await this.generateEval(context, options, uploadedFiles.filter(f => f.contextType === 'evalInspiration'));
+    const evaluation = await this.generateEval(context, options, uploadedFiles.filter(f => f.contextType === 'evalInspiration'), evalPromptTemplate);
     const evalEnd = performance.now();
 
     return {
       context,
       evaluation,
       metadata: {
-        contextPrompt: contextPrompt,
-        evalPrompt: evalPrompt,
+        generationPromptVersion: 'v1',
         contextTimeMs: Math.round(contextEnd - contextStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
-        model: this.genModel,
+        model: options.genModel,
       },
     };
   }
-
-  async regenerateQuestion(options: RegenerateOptions) {
-    const questionRegenPrompt = this.combinePropts(prompts.regenQuestionSystemPrompt, prompts.regenQuestionUserPrompt(options.question, options.prompt));
-
-    const regenModel = this.genAI.getGenerativeModel({
-        model: this.genModel,
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: responseSchemas.questionSchema
-        }
-    });
-
-    const result = await regenModel.generateContent([
-        questionRegenPrompt
-    ]);
-
-    return result.response.text();
-  }
 }
 
+export const getHandlerInstance = (apiKey: string): GeminiGenerateHandler => {
+  return GeminiGenerateHandler.getInstance(apiKey);
+}

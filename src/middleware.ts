@@ -40,6 +40,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
     matcher: [
-        '/login', '/register', '/eval/:path*'
+        '/login', '/register', '/eval/:path*', '/files'
     ]
 }
