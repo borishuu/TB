@@ -101,7 +101,8 @@ Générez une évaluation basée sur le contexte suivant :
 ${contextText}
 
 ${combinedInspirationContent !== "" ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+${combinedInspirationContent}
 ` : ''}
 `;
 

@@ -45,9 +45,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: "Question not found" }, { status: 404 });
         }
 
-        const llmHandler = await getRegenerationHandler('gemini', 'v1');
+        const llmHandler = await getRegenerationHandler('models/gemini-2.5-flash', 'v1');
 
-        const newQuestion = await llmHandler.regenerateQuestion({ prompt, question: currentContent[questionIndex] });
+        const newQuestion = await llmHandler.regenerateQuestion({ genModel: 'models/gemini-2.5-flash', prompt, question: currentContent[questionIndex] });
 
         if (!newQuestion) {
             return NextResponse.json({ error: "Failed to generate new question" }, { status: 500 });

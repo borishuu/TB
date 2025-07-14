@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             data: {
               title: originalEval.title + ' (copie)',
               content: originalEval.content === null ? Prisma.JsonNull : originalEval.content,
-              prompts: originalEval.prompts === null ? Prisma.JsonNull : originalEval.prompts,
+              metadata: originalEval.metadata === null ? Prisma.JsonNull : originalEval.metadata,
               genModel: originalEval.genModel,
               authorId: originalEval.authorId,
             },

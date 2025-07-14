@@ -118,17 +118,17 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     const combinedCourseContent = await this.combineFileContents(options.files.filter(f => f.contextType === 'course'));
     const combinedInspirationContent = await this.combineFileContents(options.files.filter(f => f.contextType === 'evalInspiration'));
 
-    // Préparer le contexte
+    // Prepare context
     const contextStart = performance.now();    
     const context = await this.generateContext(options, combinedCourseContent);
     const contextEnd = performance.now(); 
 
-    // Générer le plan    
+    // Generate plan  
     const planStart = performance.now();    
     const plan = await this.generateEvalPlan(options, context, combinedInspirationContent);    
     const planEnd = performance.now();
 
-    // Générer l'évaluation finale
+    // Generate evaluation
     const evalStart = performance.now();
     const evaluation = await this.generateEvalFromPlan(options, plan, context, combinedInspirationContent);
     const evalEnd = performance.now();
