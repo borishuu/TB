@@ -21,14 +21,21 @@ export default function CreateQuiz() {
 
   const router = useRouter();
 
-  const models: Record<string, { model: string; prompts: string[] }>  = {
+  const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
     'gemini 2.5 flash': {
       model: 'models/gemini-2.5-flash',
-      prompts: ['v1'],
+      prompts: [{ value: 'v1', label: 'v1 - standard' }],
     },
     'codestral': {
       model: 'codestral-2501',
-      prompts: ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'],
+      prompts: [
+        { value: 'v1', label: 'v1 - standard (extraction contenu -> génération éval)' },
+        { value: 'v2', label: 'v2 - instructions dans system prompts' },
+        { value: 'v3', label: 'v3 - extraction -> génération plan -> génération éval' },
+        { value: 'v4', label: 'v4 - v2 avec exemple' },
+        { value: 'v5', label: 'v5 - v4 avec CoT' },
+        { value: 'v6', label: 'v6 - extraction -> plan -> éval -> corrections' },
+      ],
     },
   };
 
@@ -63,7 +70,8 @@ export default function CreateQuiz() {
       });
 
       if (!response.ok) {
-        throw new Error('Quiz creation failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error ||'Création de l\'évaluation a échoué');
       }
 
       const data = await response.json();
@@ -71,8 +79,9 @@ export default function CreateQuiz() {
       router.push(`/eval/${data}`);
     } catch (error: any) {
       setError(error.message);
-    } finally {
       setLoading(false);
+    } finally {
+      //setLoading(false);
     }
   };
 
@@ -209,7 +218,7 @@ export default function CreateQuiz() {
 
           {/* Prompting */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Types de promps</label>
+            <label className="block text-sm font-medium text-gray-700">Version des prompts</label>
             <select
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={prompts}
@@ -218,8 +227,8 @@ export default function CreateQuiz() {
             >
               <option value="">Sélectionnez un type de prompt</option>
               {availablePrompts.map((prompt) => (
-                <option key={prompt} value={prompt}>
-                  {prompt}
+                <option key={prompt.value} value={prompt.value}>
+                  {prompt.label}
                 </option>
               ))}
             </select>

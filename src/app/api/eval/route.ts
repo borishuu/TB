@@ -30,29 +30,29 @@ export async function POST(request: NextRequest) {
         }
 
         if (!title) {
-            return NextResponse.json({ error: "Quiz must have a title" }, { status: 400 });
+            return NextResponse.json({ error: "Evaluation doit avoir un titre" }, { status: 400 });
         }
 
         if ((!contentFiles || contentFiles.length === 0) && suggestedFileIds.length === 0) {
-            return NextResponse.json({ error: "At least one file must be provided" }, { status: 400 });
+            return NextResponse.json({ error: "Au moins un fichier doit être fourni" }, { status: 400 });
         }
 
         if (!globalDifficulty) {
-            return NextResponse.json({ error: "Global difficulty must be provided" }, { status: 400 });
+            return NextResponse.json({ error: "La difficulté doit être fournie" }, { status: 400 });
         }
 
         if (questionTypes.length === 0) {
-            return NextResponse.json({ error: "At least one question type must be provided" }, { status: 400 });
+            return NextResponse.json({ error: "Au moins un type de question doit être fourni" }, { status: 400 });
         }
 
         if (!model) {
             console.log("Model not provided, using default");
-            return NextResponse.json({ error: "Model must be provided" }, { status: 400 });
+            return NextResponse.json({ error: "Modèle LLM doit être fourni" }, { status: 400 });
         }
 
         if (!prompts) {
             console.log("Prompts not provided");
-            return NextResponse.json({ error: "Prompts must be provided" }, { status: 400 });
+            return NextResponse.json({ error: "Version des prompts doit être fourni" }, { status: 400 });
         }
 
         // Parse local file metadata
@@ -100,9 +100,8 @@ export async function POST(request: NextRequest) {
         let quizJSON;
         try {
             quizJSON = JSON.parse(generationResult.evaluation);
-        } catch (error) {
-            console.error("Invalid JSON format:", error);
-            return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
+        } catch (error) {            
+            return NextResponse.json({ error: "L'évaluation généré n'est pas du JSON valide" }, { status: 500 });
         }
 
         const createdEval = await prisma.quiz.create({
