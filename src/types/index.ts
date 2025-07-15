@@ -18,6 +18,7 @@ export interface EvaluationVersion {
 export interface Eval {
     id: number;
     title: string;
+    course: object;
     versions: EvaluationVersion[]; 
     currentVersion?: EvaluationVersion;
 }

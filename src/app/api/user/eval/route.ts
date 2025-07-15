@@ -16,7 +16,13 @@ export async function GET(request: NextRequest) {
             where: { authorId: userId as number },
             include: {
                 currentVersion: true,
+                course: {
+                    select: {
+                        courseName: true
+                    }
+                },
             }
+            
         });
 
         return NextResponse.json(userQuizzes, { status: 200 });

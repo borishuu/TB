@@ -16,10 +16,7 @@ export async function POST(request: NextRequest) {
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
     const model = form.get("model") as string;
     const prompts = form.get("prompts") as string;
-    // TODO get course
-
-    //const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
-    //const llmHandler: LLMHandler = MistralHandler.getInstance(process.env.MISTRAL_API_KEY as string);
+    const courseIdStr = form.get("courseId") as string;
 
     try {
 
@@ -54,6 +51,12 @@ export async function POST(request: NextRequest) {
         if (!prompts) {
             console.log("Prompts not provided");
             return NextResponse.json({ error: "Version des prompts doit être fourni" }, { status: 400 });
+        }
+
+        const courseId = Number(courseIdStr);
+
+        if (!courseId || isNaN(courseId)) {
+            return NextResponse.json({ error: "Course ID invalide" }, { status: 400 });
         }
 
         // Parse local file metadata
@@ -123,7 +126,7 @@ export async function POST(request: NextRequest) {
                 genModel: model,
                 metadata: generationResult.metadata,
                 author: { connect: { id: userId as number } },
-                course: { connect: { id: 1 } },
+                course: { connect: { id: courseId as number } },
             },
         });
         

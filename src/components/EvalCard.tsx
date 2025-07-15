@@ -52,6 +52,7 @@ export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCard
         <EvalMenu onDelete={handleDelete} onDuplicate={handleDuplicate} />
       </div>
       <h2 className="text-xl font-semibold">{evaluation.title}</h2>
+      <p className="text-gray-400 text-sm">{(evaluation.course as any).courseName}</p>
       <p className="text-gray-500">Questions: {questionCount}</p>
       <button
         className="mt-3 button"
@@ -61,4 +62,5 @@ export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCard
       </button>
     </div>
   );
+  
 }
