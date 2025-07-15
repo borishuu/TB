@@ -2,7 +2,6 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-//import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
 import { getRegenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,16 +25,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: "Both questionNumber and prompt are required" }, { status: 400 });
         }
 
-        // Fetch the existing quiz
-        const quiz = await prisma.quiz.findUnique({
+        // Fetch the existing evaluation
+        const evaluation = await prisma.evaluation.findUnique({
             where: { id: quizId },
+            include: {
+                currentVersion: true,
+            }
         });
 
-        if (!quiz) {
-            return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+        if (!evaluation || !evaluation.currentVersion) {
+            return NextResponse.json({ error: "Evaluation ou version actuelle pas toruvée" }, { status: 404 });
         }
 
-        const quizContentObject = quiz.content as Prisma.JsonObject;
+        const quizContentObject = evaluation.currentVersion.content as Prisma.JsonObject;
         const currentContent = quizContentObject['content'] as Prisma.JsonArray;
 
         // Find the question to regenerate
@@ -64,17 +66,34 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         // Replace the old question with the regenerated one
         currentContent[questionIndex] = questionJSON;
 
-        console.log(currentContent);
+        const previousVersionInfo = evaluation.currentVersion.versionInfo as Prisma.JsonObject | null;
+        const previousNumber = previousVersionInfo?.versionNumber as number | undefined;
+        const nextVersionNumber = (previousNumber ?? 0) + 1;
 
-        // Update the quiz in the database
-        const updatedQuiz = await prisma.quiz.update({
-            where: { id: quizId },
+        // Create new evaluation version
+        const newVersion = await prisma.evaluationVersion.create({
             data: {
-                content: { content: currentContent }
+                content: {
+                    content: currentContent
+                },
+                evaluation: {
+                    connect: { id: quizId }
+                },
+                versionInfo: { versionNumber: nextVersionNumber, info: `Régénération de la question ${questionNumber}`}
             }
         });
 
-        return NextResponse.json(questionJSON, { status: 200 });
+        // Update evaluation to point to new version
+        await prisma.evaluation.update({
+            where: { id: quizId },
+            data: {
+                currentVersion: {
+                    connect: { id: newVersion.id }
+                }
+            }
+        });
+
+        return NextResponse.json({ newVersion }, { status: 200 });
     } catch (error) {
         console.error("Error updating quiz:", error);
         return NextResponse.json({ error: "Failed to update quiz" }, { status: 500 });

@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FileWithCheckbox from '@/components/FileWithCheckbox';
+import CourseDropdown from '@/components/CourseDropdown';
 import { LocalFile, PoolFile } from '@/types';
 
 export default function CreateQuiz() {

@@ -6,9 +6,9 @@ import {useRouter} from "next/navigation";
 
 import { useAuth } from '@/context/authContext';
 
-const NAV_ITEMS_PUBLIC = [
+/*const NAV_ITEMS_PUBLIC = [
   { href: '/', label: 'Accueil' },
-];
+];*/
 
 const NAV_ITEMS_DISCONNECTED = [
   { href: '/login', label: 'Login' },
@@ -57,9 +57,9 @@ export default function Nav() {
 
         {/* Right side */}
         <div className="flex items-center space-x-8">
-          {NAV_ITEMS_PUBLIC.map(({ href, label }) => (
+          {/*NAV_ITEMS_PUBLIC.map(({ href, label }) => (
             <NavLink key={href} href={href} label={label} isActive={pathname.startsWith(href)} />
-          ))}
+          ))*/}
 
           {/* Conditionally render based on the user's authentication status */}
           {user ? (

@@ -19,13 +19,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
         }
 
-        const quiz = await prisma.quiz.findUnique({
+        const evaluation = await prisma.evaluation.findUnique({
             where: { id: quizId},
+            include: {
+                currentVersion: true,
+                versions: {
+                  orderBy: { createdAt: 'desc' },
+                }
+            }
         });
 
-        if (!quiz) return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+        if (!evaluation) return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
 
-        return NextResponse.json(quiz, { status: 200 });
+        return NextResponse.json(evaluation, { status: 200 });
     } catch (error) {
         console.error("Error fetching evaluation:", error);
         return NextResponse.json({ error: "Failed to fetch evaluation" }, { status: 500 });
@@ -34,7 +40,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        // Ensure only a logged in user can call this route
         const { userId, error } = await verifyAuth(request);
 
         if (error) {
@@ -42,12 +47,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         const { id } = await params;
-        const quizId = parseInt(id, 10);
-        if (isNaN(quizId)) {
+        const evalId = parseInt(id, 10);
+
+        if (isNaN(evalId)) {
             return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
         }
 
-        // Expecting the updated question in the request body
         const body = await request.json();
         const { editQuestion } = body;
 
@@ -55,42 +60,58 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: "Updated question must include a valid 'number'" }, { status: 400 });
         }
 
-        // Fetch the existing quiz
-        const quiz = await prisma.quiz.findUnique({
-            where: { id: quizId },
+        // Get current version content
+        const evaluation = await prisma.evaluation.findUnique({
+            where: { id: evalId },
+            include: {
+                currentVersion: true,
+            }
         });
 
-        if (!quiz) {
-            return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+        if (!evaluation || !evaluation.currentVersion) {
+            return NextResponse.json({ error: "Evaluation ou version actuelle pas toruvée" }, { status: 404 });
         }
 
-        const quizContentObject = quiz.content as Prisma.JsonObject
+        const quizContent = evaluation.currentVersion.content as Prisma.JsonObject;
+        const questions = (quizContent['content'] as Prisma.JsonArray) || [];
 
-        // Get the current questions array, defaulting to an empty array if not present.
-        const currentContent = quizContentObject['content'] as Prisma.JsonArray;
+        const updatedQuestions = questions.map((q: any) =>
+            q.number === editQuestion.number ? editQuestion : q
+        );
 
-        // Update only the question that matches the updated question's number.
-        const updatedQuestions = currentContent.map((q: any) => {
-            if (q.number === editQuestion.number) {
-                return editQuestion;
-            }
-            return q;
-        });
+        const updatedContent = {
+            ...quizContent,
+            content: updatedQuestions
+        };
 
-        // Update the quiz with the new questions array.
-        const updatedQuiz = await prisma.quiz.update({
-            where: { id: quizId },
+        const previousVersionInfo = evaluation.currentVersion.versionInfo as Prisma.JsonObject | null;
+        const previousNumber = previousVersionInfo?.versionNumber as number | undefined;
+        const nextVersionNumber = (previousNumber ?? 0) + 1;
+
+        // Create new version
+        const newVersion = await prisma.evaluationVersion.create({
             data: {
-                content: { content: updatedQuestions }
+                content: updatedContent,
+                evaluation: { connect: { id: evalId } },
+                versionInfo: { versionNumber: nextVersionNumber, info: `Modification de la question ${editQuestion.number}` },
             }
         });
 
-        return NextResponse.json(updatedQuiz, { status: 200 });
+        // Update evaluation to point to new current version
+        const updatedQuiz = await prisma.evaluation.update({
+            where: { id: evalId },
+            data: {
+                currentVersionId: newVersion.id,
+            }
+        });
+
+        return NextResponse.json({ newVersion }, { status: 200 });
     } catch (error) {
-        console.error("Error updating evaluation:", error);
-        return NextResponse.json({ error: "Failed to update evaluation" }, { status: 500 });
+        console.error("Error updating evaluation version:", error);
+        return NextResponse.json({ error: "Failed to update evaluation version" }, { status: 500 });
     }
 }
+
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -109,7 +130,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         }
 
         // Ensure the eval belongs to the authenticated user
-        const quiz = await prisma.quiz.findUnique({
+        const quiz = await prisma.evaluation.findUnique({
             where: { id: quizId },
         });
 
@@ -121,7 +142,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        await prisma.quiz.delete({
+        await prisma.evaluation.delete({
             where: { id: quizId },
         });
 

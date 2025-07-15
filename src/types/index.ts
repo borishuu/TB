@@ -1,3 +1,4 @@
+
 interface Question {
     number: string;
     questionText: string;
@@ -7,10 +8,18 @@ interface Question {
     explanation?: string;
 }
 
+export interface EvaluationVersion {
+    id: number;
+    content: { content: Question[] };
+    versionInfo?: { versionNumber: number; info: string };
+    createdAt: string;
+}
+
 export interface Eval {
     id: number;
     title: string;
-    content: { content: Question[] };
+    versions: EvaluationVersion[]; 
+    currentVersion?: EvaluationVersion;
 }
 
 export interface PoolFile {

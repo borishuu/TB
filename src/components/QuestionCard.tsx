@@ -17,7 +17,7 @@ interface Question {
     explanation?: string;
 }
 
-export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Question, quizId: ParamValue }) {
+export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { baseQuestion: Question, quizId: ParamValue, onNewVersion?: (version: any) => void }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [regenState, setRegentState] = useState(false);
@@ -47,8 +47,11 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
             if (!response.ok) {
                 throw new Error('Failed to update question');
             }
+            const data = await response.json();
+            const newVersion = data.newVersion;
             setQuestion(editQuestion);
             setIsEditing(false);
+            if (onNewVersion) onNewVersion(newVersion);
         } catch (error) {
             console.error("Error saving question:", error);
         }
@@ -75,9 +78,10 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
             if (!response.ok) {
                 throw new Error('Failed to regenerate question');
             }
-            const newQuestion: Question = await response.json();
-            setQuestion(newQuestion);
+            const newVersion = await response.json();
+            //setQuestion(newQuestion);
             setIsRegenerating(false);
+            if (onNewVersion) onNewVersion(newVersion.newVersion);
         } catch (error) {
             console.error("Error regenerating question:", error);
             setIsRegenerating(false);

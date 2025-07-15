@@ -12,7 +12,7 @@ interface EvalCardProps {
 
 export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCardProps) {
   const router = useRouter();
-  const questionCount = Array.isArray(evaluation.content.content) ? evaluation.content.content.length : 0;
+  const questionCount = Array.isArray(evaluation.currentVersion?.content.content) ? evaluation.currentVersion?.content.content.length : 0;
 
   const handleDelete = async () => {
     const response = await fetch(`/api/eval/${evaluation.id}`, {
