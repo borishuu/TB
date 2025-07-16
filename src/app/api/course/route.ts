@@ -1,18 +1,10 @@
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     
     try {
-        const { error } = await verifyAuth(request);
-        
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         const courses = await prisma.course.findMany({});
-
         return NextResponse.json(courses, { status: 200 });
          
     } catch (error) {
@@ -24,12 +16,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-      const { userId, error } = await verifyAuth(request);
-  
-      if (error) {
-        return NextResponse.json({ error }, { status: 401 });
-      }
-  
       const body = await request.json();
       const { name } = body;
   

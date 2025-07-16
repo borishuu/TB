@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 import fs from 'fs/promises';
 import path from 'path';
 import pdfParse from 'pdf-parse';
@@ -15,12 +14,6 @@ export async function POST(request: NextRequest) {
   const contentFiles = form.getAll('files') as File[];
 
   try {
-    const { userId, error } = await verifyAuth(request);
-
-    if (error) {
-      return NextResponse.json({ error }, { status: 401 });
-    }
-
     if (!contentFiles || contentFiles.length === 0) {
       return NextResponse.json({ error: "Files must be provided" }, { status: 400 });
     }

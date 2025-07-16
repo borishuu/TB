@@ -1,17 +1,9 @@
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    try {
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-        
+    try {       
         const { id } = await params;
         const quizId = parseInt(id, 10);
 
@@ -40,12 +32,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         const { id } = await params;
         const evalId = parseInt(id, 10);
 
@@ -98,7 +84,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         });
 
         // Update evaluation to point to new current version
-        const updatedQuiz = await prisma.evaluation.update({
+        await prisma.evaluation.update({
             where: { id: evalId },
             data: {
                 currentVersionId: newVersion.id,
@@ -115,13 +101,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         const { id } = await params;
         const quizId = parseInt(id, 10);
 
@@ -136,10 +115,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
         if (!quiz) {
             return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
-        }
-
-        if (quiz.authorId !== userId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
         await prisma.evaluation.delete({

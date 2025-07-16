@@ -1,15 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { verifyAuth } from '@/lib/verifyAuth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { userId, error } = await verifyAuth(request);
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         const { id } = await params;
         const evalId = parseInt(id, 10);
         if (isNaN(evalId)) {
@@ -32,7 +26,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 title: originalEval.title + ' (copie)',
                 metadata: originalEval.metadata ?? Prisma.JsonNull,
                 genModel: originalEval.genModel,
-                authorId: originalEval.authorId,
                 courseId: originalEval.courseId,
             },
         });

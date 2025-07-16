@@ -1,7 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
 export async function POST(request: NextRequest) {
@@ -10,14 +9,6 @@ export async function POST(request: NextRequest) {
     const topics = form.get('topics') as string;
 
     try {
-
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         if (!topics) {
             return NextResponse.json({ error: "No topics to do a similarity search" }, { status: 400 });
         }
