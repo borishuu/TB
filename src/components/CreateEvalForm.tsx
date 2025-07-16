@@ -1,5 +1,6 @@
 'use client';
 
+import { XMarkIcon } from '@heroicons/react/24/solid';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FileWithCheckbox from '@/components/FileWithCheckbox';
@@ -8,7 +9,8 @@ import { LocalFile, PoolFile, Course } from '@/types';
 
 export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const [title, setTitle] = useState('');
-  const [topics, setTopics] = useState('');
+  const [topics, setTopics] = useState<string[]>([]);
+  const [topicInput, setTopicInput] = useState<string>('');
   const [difficulty, setDifficulty] = useState('medium');
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [files, setFiles] = useState<LocalFile[]>([]);
@@ -21,6 +23,8 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const [localCourses, setLocalCourses] = useState<Course[]>(courses || []);
   const [selectedCourse, setSelectedCourse] = useState<number | ''>('');
   const [newCourseName, setNewCourseName] = useState('');
+  const [allPoolFiles, setAllPoolFiles] = useState<PoolFile[]>([]);
+  const [showPoolModal, setShowPoolModal] = useState(false);
   const localInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
@@ -54,20 +58,26 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
     try {
       const formData = new FormData();
       formData.append('title', title);
-      formData.append('topics', topics);
       formData.append('difficulty', difficulty);
       formData.append('model', model);   
       formData.append('prompts', prompts);
       formData.append('courseId', String(selectedCourse || ''));
+      topics.forEach((topic) => formData.append('topics', topic));
       questionTypes.forEach((type) => formData.append('questionTypes', type));
       suggestedFiles.forEach((file) => formData.append('suggestedFileIds', String(file.id)));
-
       files.forEach((file) => formData.append('contentFiles', file.file));
+
       const fileMetadata = files.map((localFile) => ({
         name: localFile.file.name,
         contextType: localFile.contextType,
       }));
       formData.append('contentFilesMeta', JSON.stringify(fileMetadata));
+
+      const poolFileMetadata = suggestedFiles.map((poolFile) => ({
+        name: poolFile.fileName,
+        contextType: poolFile.contextType,
+      }));
+      formData.append('poolFilesMeta', JSON.stringify(poolFileMetadata));
 
       const response = await fetch('/api/eval', {
         method: 'POST',
@@ -92,7 +102,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
   const handleFindCorrespondingFiles = async () => {
     const formData = new FormData();
-    formData.append('topics', topics);
+    topics.forEach((topic) => formData.append('topics', topic));
 
     const response = await fetch('/api/file/similarity', {
       method: 'POST',
@@ -104,7 +114,11 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
     }
 
     const data = await response.json();
-    setSuggestedFiles(data.files);
+    const filesWithContext = data.files.map((file: PoolFile) => ({
+      ...file,
+      contextType: 'course',
+    }));
+    setSuggestedFiles(filesWithContext);
   };
 
   const addFiles = (newFiles: FileList | null) => {
@@ -152,6 +166,14 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
     );
   };
 
+  const changePoolFileContextType = (index: number) => {
+    setSuggestedFiles((prev) =>
+      prev.map((f, i) =>
+        i === index ? { ...f, contextType: f.contextType === 'course' ? 'evalInspiration' : 'course' } : f
+      )
+    );
+  };
+
   const toggleQuestionType = (type: string) => {
     setQuestionTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
@@ -164,6 +186,37 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
     'QCM',
     'Question ouverte',
   ];
+
+  const addTopic = () => {
+    const newTopic = topicInput.trim();
+    if (newTopic && !topics.includes(newTopic)) {
+      setTopics([...topics, newTopic]);
+    }
+    setTopicInput('');
+  };
+
+  const removeTopic = (topic: string) => {
+    setTopics(topics.filter(t => t !== topic));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTopic();
+    }
+  };
+
+  const handleBrowsePoolFiles = async () => {
+    try {
+      const response = await fetch('/api/user/files');
+      if (!response.ok) throw new Error('Erreur lors du chargement des fichiers');
+      const data = await response.json();
+      setAllPoolFiles(data);
+      setShowPoolModal(true);
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
 
   return (
     <div className="relative flex items-center justify-center">
@@ -274,13 +327,40 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           {/* Topics */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Sujets</label>
-            <textarea
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Indiquez les sujets à aborder (ex: récursivité, typage...)"
-              rows={4}
-              value={topics}
-              onChange={(e) => setTopics(e.target.value)}
-            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {topics.map((topic) => (
+                <span
+                  key={topic}
+                  className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                >
+                  {topic}
+                  <button
+                    type="button"
+                    className="ml-1 focus:outline-none"
+                    onClick={() => removeTopic(topic)}
+                  >
+                    <XMarkIcon className="w-4 h-4" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex mt-2">
+              <input
+                type="text"
+                className="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ajouter un sujet et appuyer sur Entrée"
+                value={topicInput}
+                onChange={(e) => setTopicInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              <button
+                type="button"
+                onClick={addTopic}
+                className="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 transition"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {/* Suggested Files */}
@@ -292,21 +372,20 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
               className="button mb-4"
             >
               Chercher fichiers correspondants
-            </button>
-            <p className='text-red-500'>Fichiers de pool seront pas passés comme fichiers d'inspiration</p>
+            </button>            
             <div className="border-2 border-dashed rounded-lg p-4 text-center border-gray-300">
               <p className="text-gray-500">
                 Recherche automatique depuis les sujets donnés, ou{' '}
-                <span className="text-blue-600 underline cursor-pointer">parcourir</span>
+                <span className="text-blue-600 underline cursor-pointer" onClick={handleBrowsePoolFiles}>parcourir</span>
               </p>
               {suggestedFiles.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {suggestedFiles.map((file) => (
+                  {suggestedFiles.map((file, index) => (
                     <div key={file.id} className="relative">
                       <FileWithCheckbox
                         file={file}
                         onDelete={() => removeSuggestedFile(file.id)}
-                        onCheckboxChange={() => {}}
+                        onCheckboxChange={() => changePoolFileContextType(index)}
                       />
                     </div>
                   ))}
@@ -350,7 +429,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                   {files.map((file, index) => (
                     <div key={index} className="relative">
                       <FileWithCheckbox
-                        file={{ id: index, fileName: file.file.name, course: {}, createdAt: '' }}
+                        file={{ id: index, fileName: file.file.name, course: {}, createdAt: '', contextType: 'course' }}
                         onDelete={() => removeFile(index)}
                         onCheckboxChange={() => changeLocalFileContextType(index)}
                       />
@@ -364,7 +443,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           <button
             type="submit"
             className="w-full button"
-            disabled={loading || !prompts || !title || questionTypes.length === 0 || files.length === 0}
+            disabled={loading || !prompts || !title || questionTypes.length === 0 || (files.length === 0 && suggestedFiles.length === 0)}
           >
             {loading ? 'Génération...' : 'Générer'}
           </button>
@@ -374,6 +453,40 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      {showPoolModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-2xl p-6 rounded-lg shadow-lg overflow-y-auto max-h-[80vh]">
+            <h3 className="text-xl font-bold mb-4">Sélectionner des fichiers de mon pool</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {allPoolFiles.map((file) => (
+                <div key={file.id} className="border p-2 rounded flex items-center justify-between">
+                  <span className="truncate">{file.fileName}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!suggestedFiles.some(f => f.id === file.id)) {
+                        setSuggestedFiles((prev) => [...prev, {...file, contextType: 'course' }]);
+                      }
+                    }}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setShowPoolModal(false)}
+                className="button"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

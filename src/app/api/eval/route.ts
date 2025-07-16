@@ -7,7 +7,8 @@ export async function POST(request: NextRequest) {
     const form = await request.formData();
     const title = form.get('title') as string;
     const contentFiles = form.getAll("contentFiles") as File[];
-    const contentFilesMeta = form.get("contentFilesMeta") as string; 
+    const contentFilesMeta = form.get("contentFilesMeta") as string;
+    const poolFilesMeta = form.get("poolFilesMeta") as string; 
     const globalDifficulty = form.get("difficulty") as string;
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
@@ -56,6 +57,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid contentFilesMeta JSON' }, { status: 400 });
         }
 
+        // Parse pool file metadata
+        let parsedPoolMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
+        try {
+            parsedPoolMeta = JSON.parse(poolFilesMeta);
+        } catch (e) {
+            return NextResponse.json({ error: 'Invalid poolFilesMeta JSON' }, { status: 400 });
+        }
+
         const generationHandler = await getGenerationHandler(model, prompts);
 
         // TODO: Handle pool files context types
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
             } as FileWithContext)), 
             ...poolFiles.map(f => ({ 
                 file: { fileName: f.fileName, filePath: f.filePath, mimeType: f.mimeType }, 
-                contextType: 'course' 
+                contextType: parsedPoolMeta.find(m => m.name === f.fileName)?.contextType || 'course' 
             } as FileWithContext))
         ];
 
@@ -127,6 +136,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(evaluation.id);
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Failed to login" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur dans la génération de l'évaluation" }, { status: 500 });
     }
 }
