@@ -12,13 +12,17 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error }, { status: 401 });
         }
 
-        const userQuizzes = await prisma.quiz.findMany({
+        const userQuizzes = await prisma.evaluation.findMany({
             where: { authorId: userId as number },
-            select: {
-                id: true,
-                title: true,
-                content: true
+            include: {
+                currentVersion: true,
+                course: {
+                    select: {
+                        courseName: true
+                    }
+                },
             }
+            
         });
 
         return NextResponse.json(userQuizzes, { status: 200 });

@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { userId, error } = await verifyAuth(request);
-
         if (error) {
             return NextResponse.json({ error }, { status: 401 });
         }
@@ -17,27 +16,49 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
         }
 
-        // Fetch the original evaluation
-        const originalEval = await prisma.quiz.findUnique({
+        // Fetch the original evaluation with its current version
+        const originalEval = await prisma.evaluation.findUnique({
             where: { id: evalId },
+            include: { currentVersion: true },
         });
 
-        if (!originalEval) {
-            return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+        if (!originalEval || !originalEval.currentVersion) {
+            return NextResponse.json({ error: "Evaluation or its current version not found" }, { status: 404 });
         }
 
-        // Create a copy of the evaluation
-        const duplicatedEval = await prisma.quiz.create({
+        // Create duplicated evaluation
+        const duplicatedEval = await prisma.evaluation.create({
             data: {
-              title: originalEval.title + ' (copie)',
-              content: originalEval.content === null ? Prisma.JsonNull : originalEval.content,
-              metadata: originalEval.metadata === null ? Prisma.JsonNull : originalEval.metadata,
-              genModel: originalEval.genModel,
-              authorId: originalEval.authorId,
+                title: originalEval.title + ' (copie)',
+                metadata: originalEval.metadata ?? Prisma.JsonNull,
+                genModel: originalEval.genModel,
+                authorId: originalEval.authorId,
+                courseId: originalEval.courseId,
             },
-          });
+        });
 
-        return NextResponse.json(duplicatedEval, { status: 201 });
+        // Create a new initial version
+        const newVersion = await prisma.evaluationVersion.create({
+            data: {
+                evaluationId: duplicatedEval.id,
+                content: originalEval.currentVersion.content ?? Prisma.JsonNull,
+                versionInfo: {
+                    versionNumber: 1, 
+                    info: `Duplication de l'évaluation ${originalEval.title}`,
+                },
+            }
+        });
+
+        // Set this version as the currentVersion of the duplicated evaluation
+        const updatedEval = await prisma.evaluation.update({
+            where: { id: duplicatedEval.id },
+            data: {
+                currentVersionId: newVersion.id
+            }
+        });
+
+        return NextResponse.json(updatedEval, { status: 201 });
+
     } catch (error) {
         console.error("Error duplicating evaluation:", error);
         return NextResponse.json({ error: "Failed to duplicate evaluation" }, { status: 500 });

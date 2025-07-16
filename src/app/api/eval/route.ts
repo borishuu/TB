@@ -16,9 +16,7 @@ export async function POST(request: NextRequest) {
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
     const model = form.get("model") as string;
     const prompts = form.get("prompts") as string;
-
-    //const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
-    //const llmHandler: LLMHandler = MistralHandler.getInstance(process.env.MISTRAL_API_KEY as string);
+    const courseIdStr = form.get("courseId") as string;
 
     try {
 
@@ -53,6 +51,12 @@ export async function POST(request: NextRequest) {
         if (!prompts) {
             console.log("Prompts not provided");
             return NextResponse.json({ error: "Version des prompts doit être fourni" }, { status: 400 });
+        }
+
+        const courseId = Number(courseIdStr);
+
+        if (!courseId || isNaN(courseId)) {
+            return NextResponse.json({ error: "Course ID invalide" }, { status: 400 });
         }
 
         // Parse local file metadata
@@ -104,7 +108,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "L'évaluation généré n'est pas du JSON valide" }, { status: 500 });
         }
 
-        const createdEval = await prisma.quiz.create({
+        /*const createdEval = await prisma.evaluation.create({
             data: {
                 title: title,
                 content: quizJSON,
@@ -112,9 +116,38 @@ export async function POST(request: NextRequest) {
                 genModel: model,
                 author: {connect: {id: userId as number}},
             },
+        });*/
+
+
+        // Create the evaluation without a current version
+        const evaluation = await prisma.evaluation.create({
+            data: {
+                title,
+                genModel: model,
+                metadata: generationResult.metadata,
+                author: { connect: { id: userId as number } },
+                course: { connect: { id: courseId as number } },
+            },
+        });
+        
+        // Create the version and connect it to the evaluation
+        const version = await prisma.evaluationVersion.create({
+            data: {
+                content: quizJSON,
+                versionInfo: { versionNumber: 1, info: "Version initiale" },
+                evaluation: { connect: { id: evaluation.id } },
+            },
+        });
+        
+        // Update the evaluation to set the currentVersion
+        await prisma.evaluation.update({
+            where: { id: evaluation.id },
+            data: {
+                currentVersion: { connect: { id: version.id } }
+            },
         });
 
-        return NextResponse.json(createdEval.id);
+        return NextResponse.json(evaluation.id);
     } catch (error) {
         console.log(error);
         return NextResponse.json({ error: "Failed to login" }, { status: 500 });
