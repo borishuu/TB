@@ -364,7 +364,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           <button
             type="submit"
             className="w-full button"
-            disabled={loading || !prompts}
+            disabled={loading || !prompts || !title || questionTypes.length === 0 || files.length === 0}
           >
             {loading ? 'Génération...' : 'Générer'}
           </button>

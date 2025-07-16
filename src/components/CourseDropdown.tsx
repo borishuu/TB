@@ -74,7 +74,7 @@ export default function CourseDropdown({
         onChange={handleSelectChange}
         className="w-full border rounded px-3 py-2"
       >
-        <option value="">Sélectionner un cours</option>
+        <option value="0">Sélectionner un cours</option>
         {courses.map((course) => (
           <option key={course.id} value={course.id}>
             {course.courseName}

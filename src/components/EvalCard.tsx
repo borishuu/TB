@@ -46,10 +46,41 @@ export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCard
     onDuplicate(newEval);
   };
 
+  const handleDownload = async () => {
+    try {
+      const content = evaluation.currentVersion?.content;
+  
+      if (!content) {
+        console.error("No evaluation content found to download");
+        return;
+      }
+  
+      const exportObj = {
+        title: evaluation.title,
+        content: content.content,
+      };
+  
+      const jsonStr = JSON.stringify(exportObj, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${evaluation.title || 'evaluation'}.json`;
+      document.body.appendChild(link);
+      link.click();
+  
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download evaluation:", error);
+    }
+  };
+  
+
   return (
     <div className="relative bg-white shadow-lg rounded-lg p-4 border border-gray-200 hover:shadow-xl transition">
       <div className="absolute top-2 right-2">
-        <EvalMenu onDelete={handleDelete} onDuplicate={handleDuplicate} />
+        <EvalMenu onDelete={handleDelete} onDuplicate={handleDuplicate} onDownload={handleDownload} />
       </div>
       <h2 className="text-xl font-semibold">{evaluation.title}</h2>
       <p className="text-gray-400 text-sm">{(evaluation.course as any).courseName}</p>

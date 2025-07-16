@@ -6,9 +6,10 @@ import { useState, useRef, useEffect } from 'react';
 interface EvalMenuProps {
   onDelete: () => void;
   onDuplicate: () => void;
+  onDownload: () => void; 
 }
 
-export default function EvalMenu({ onDelete, onDuplicate }: EvalMenuProps) {
+export default function EvalMenu({ onDelete, onDuplicate, onDownload }: EvalMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -50,6 +51,15 @@ export default function EvalMenu({ onDelete, onDuplicate }: EvalMenuProps) {
             }}
           >
             Dupliquer
+          </button>
+          <button
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+            onClick={() => {
+              setOpen(false);
+              onDownload();
+            }}
+          >
+            Télécharger (JSON)
           </button>
         </div>
       )}
