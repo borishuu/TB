@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -49,7 +50,7 @@ model File {
   mimeType    String
   fileSize    Float
   filePath    String
-  embedding   Unsupported("vector(3072)")
+  textContent String
   courseId    Int
   course      Course    @relation(fields: [courseId], references: [id])
 }
