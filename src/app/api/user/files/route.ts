@@ -1,17 +1,9 @@
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     
     try {
-
-        const { userId, error } = await verifyAuth(request);
-        
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         const files = await prisma.file.findMany({
             select: {
                 id: true,

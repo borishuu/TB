@@ -1,8 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
-//import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
-//import { MistralHandler } from '@/lib/llm/mistral/MistralHandler';
 import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 import { FileWithContext } from '@/types';
 
@@ -19,14 +16,6 @@ export async function POST(request: NextRequest) {
     const courseIdStr = form.get("courseId") as string;
 
     try {
-
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         if (!title) {
             return NextResponse.json({ error: "Evaluation doit avoir un titre" }, { status: 400 });
         }
@@ -108,24 +97,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "L'évaluation généré n'est pas du JSON valide" }, { status: 500 });
         }
 
-        /*const createdEval = await prisma.evaluation.create({
-            data: {
-                title: title,
-                content: quizJSON,
-                metadata: generationResult.metadata,
-                genModel: model,
-                author: {connect: {id: userId as number}},
-            },
-        });*/
-
-
         // Create the evaluation without a current version
         const evaluation = await prisma.evaluation.create({
             data: {
                 title,
                 genModel: model,
                 metadata: generationResult.metadata,
-                author: { connect: { id: userId as number } },
                 course: { connect: { id: courseId as number } },
             },
         });

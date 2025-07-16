@@ -1,8 +1,5 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
-import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
-import { FileWithContext } from '@/types';
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
@@ -11,14 +8,6 @@ export async function POST(request: NextRequest) {
     const courseIdStr = form.get("courseId") as string;
 
     try {
-
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         if (!title) {
             return NextResponse.json({ error: "Evaluation doit avoir un titre" }, { status: 400 });
         }
@@ -44,7 +33,6 @@ export async function POST(request: NextRequest) {
         const evaluation = await prisma.evaluation.create({
             data: {
                 title,
-                author: { connect: { id: userId as number } },
                 course: { connect: { id: courseId as number } },
             },
         });
