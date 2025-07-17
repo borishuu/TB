@@ -5,7 +5,7 @@ export const questionSchema: Schema = {
   properties: {
       number: {
           type: SchemaType.STRING,
-          description: "The question number.",
+          description: "The question number. It must always be a number without any letters.",
           nullable: false
       },
       questionText: {

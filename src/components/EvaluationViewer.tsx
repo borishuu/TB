@@ -45,7 +45,12 @@ export default function EvaluationViewer({ evaluation, quizId }: EvaluationViewe
           >
             {versions.map((version) => (
               <option key={version.id} value={version.id}>
-                {`v${version.versionInfo?.versionNumber} - ${version.versionInfo?.info} - ${new Date(version.createdAt).toLocaleDateString()}`}
+                {(() => {
+                  const date = new Date(version.createdAt);
+                  const formatted = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth()+1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+                  return `v${version.versionInfo?.versionNumber} - ${version.versionInfo?.info} - ${formatted}`;
+                })()}
+
               </option>
             ))}
           </select>

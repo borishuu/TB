@@ -32,7 +32,10 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
     'gemini 2.5 flash': {
       model: 'models/gemini-2.5-flash',
-      prompts: [{ value: 'v1', label: 'v1 - standard' }],
+      prompts: [
+        { value: 'v1', label: 'v1 - standard' },
+        { value: 'v2', label: 'v2 - extraction contenu -> génération éval' },
+      ],
     },
     'codestral': {
       model: 'codestral-2501',

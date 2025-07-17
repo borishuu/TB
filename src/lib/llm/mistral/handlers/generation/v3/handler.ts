@@ -134,7 +134,6 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     const evalEnd = performance.now();
 
     return {
-      context,
       evaluation: evaluation,
       metadata: {
         generationPromptVersion: 'v3',
