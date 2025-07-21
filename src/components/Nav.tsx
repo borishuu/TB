@@ -2,17 +2,30 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {useRouter} from "next/navigation";
+import { useState } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/eval', label: 'Mes Evaluations' },
+  { href: '/eval', label: 'Mes Évaluations' },
   { href: '/files', label: 'Mes Fichiers' },
 ];
 
-const NavLink = ({ href, label, isActive }: { href: string; label: string; isActive: boolean }) => (
+const NavLink = ({
+  href,
+  label,
+  isActive,
+}: {
+  href: string;
+  label: string;
+  isActive: boolean;
+}) => (
   <Link
     href={href}
-    className={`text-center transition-transform duration-300 ${isActive ? 'font-bold transform scale-120' : 'text-base'}`}
+    aria-current={isActive ? 'page' : undefined}
+    className={`relative text-sm md:text-base transition-all duration-300 font-medium hover:text-white/90 ${
+      isActive
+        ? 'text-white font-semibold after:absolute after:bottom-[-6px] after:left-0 after:w-full after:h-[2px] after:bg-white after:rounded'
+        : 'text-white/70'
+    }`}
   >
     {label}
   </Link>
@@ -20,20 +33,26 @@ const NavLink = ({ href, label, isActive }: { href: string; label: string; isAct
 
 export default function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="absolute top-0 left-0 w-full bg-[#3e4756] text-white shadow-md z-50 py-4 px-6">
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
-        {/* Left side */}
-        <Link href="/" className="text-2xl font-bold">
+    <nav className="fixed top-0 left-0 w-full bg-[#2f3644] text-white shadow-lg z-50">
+      <div className="flex items-center justify-between max-w-7xl mx-auto py-4 px-6">
+        <Link
+          href="/"
+          className="text-2xl font-bold tracking-tight hover:opacity-90 transition-opacity"
+        >
           Evagen
         </Link>
 
-        {/* Right side */}
-        <div className="flex items-center space-x-8">
+        <div className="hidden md:flex items-center space-x-10">
           {NAV_ITEMS.map(({ href, label }) => (
-            <NavLink key={href} href={href} label={label} isActive={pathname.startsWith(href)} />
+            <NavLink
+              key={href}
+              href={href}
+              label={label}
+              isActive={pathname.startsWith(href)}
+            />
           ))}
         </div>
       </div>
