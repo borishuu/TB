@@ -123,10 +123,14 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     const context = await this.generateContext(options, combinedCourseContent);
     const contextEnd = performance.now(); 
 
+    console.log(context);
+
     // Generate plan  
     const planStart = performance.now();    
     const plan = await this.generateEvalPlan(options, context, combinedInspirationContent);    
     const planEnd = performance.now();
+
+    console.log(plan);
 
     // Generate evaluation
     const evalStart = performance.now();
@@ -134,7 +138,6 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     const evalEnd = performance.now();
 
     return {
-      context,
       evaluation: evaluation,
       metadata: {
         generationPromptVersion: 'v3',

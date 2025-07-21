@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { TrashIcon, PencilIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import ReactMarkdown from 'react-markdown';
+import { ComponentProps } from 'react';
+import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ParamValue } from 'next/dist/server/request/params';
@@ -88,50 +90,68 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
         }
     };
 
-    const renderers = {
-        code({ inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '');            
-            //const codeString = String(children).replace(/\n$/, '');
-            const codeString = String(children);
-
-    
-            if (!inline && match) {
-                return (
-                    <SyntaxHighlighter
-                        style={materialLight}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                            fontSize: '0.85em',
-                        }}
-                        {...props}
-                    >
-                        {codeString}
-                    </SyntaxHighlighter>
-                );
-            }
-    
-            // Inline or fallback
+    const renderers: Components = {
+        code({ inline, className, children, ...props }: { 
+            inline?: boolean; 
+            className?: string; 
+            children?: React.ReactNode 
+          }) {
+          const match = /language-(\w+)/.exec(className || '');
+          const codeString = String(children).replace(/\n$/, '');
+      
+          if (!inline && match) {
             return (
-                <SyntaxHighlighter
-                    style={materialLight}
-                    language={match?.[1] || 'javascript'} 
-                    PreTag="span"
-                    customStyle={{
-                        display: 'inline',
-                        padding: '0.15em 0.3em',
-                        backgroundColor: '#f5f5f5',
-                        borderRadius: '4px',
-                        fontSize: '0.95em',
-                    }}
-                    {...props}
-                >
-                    {codeString}
-                </SyntaxHighlighter>
+              <SyntaxHighlighter
+                style={materialLight}
+                language={match[1]}
+                PreTag="div"
+                customStyle={{ fontSize: '0.85em' }}
+                {...props}
+              >
+                {codeString}
+              </SyntaxHighlighter>
+            );
+          }
+      
+          return (
+            <SyntaxHighlighter
+                style={materialLight}
+                language={match?.[1] || 'javascript'} 
+                PreTag="span"
+                customStyle={{
+                    display: 'inline',
+                    padding: '0.15em 0.3em',
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '4px',
+                    fontSize: '0.95em',
+                }}
+                {...props}
+            >
+                {codeString}
+            </SyntaxHighlighter>
             );
         },
-    };
-    
+      
+        p({ children, ...props }) {
+          return <p className="mb-1 leading-tight" {...props}>{children}</p>;
+        },
+      
+        ol({ children, ...props }) {
+          return <ol className="list-decimal pl-6 mb-1 leading-tight" {...props}>{children}</ol>;
+        },
+      
+        ul({ children, ...props }) {
+          return <ul className="list-disc pl-6 mb-1 leading-tight" {...props}>{children}</ul>;
+        },
+      
+        li({ children, ...props }) {
+          return <li className="mb-0.5" {...props}>{children}</li>;
+        },
+      
+        strong({ children, ...props }) {
+          return <strong className="font-semibold" {...props}>{children}</strong>;
+        }
+      };
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 pb-10 border border-gray-200 hover:shadow-xl transition relative">
@@ -143,7 +163,7 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
                         className="border p-1 rounded w-full min-h-[240px]"
                     />
                 ) : (
-                    <div className="break-words">
+                    <div className="whitespace-pre-wrap break-words overflow-x-auto max-w-full">
                         <div className="font-semibold">
                             {`${question.number}.`}
                         </div>
