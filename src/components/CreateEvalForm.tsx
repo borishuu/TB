@@ -34,7 +34,8 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       model: 'models/gemini-2.5-flash',
       prompts: [
         { value: 'v1', label: 'v1 - standard' },
-        { value: 'v2', label: 'v2 - extraction contenu -> génération éval' },
+        { value: 'v2', label: 'v2 - extraction contenu -> génération éval + inspiration' },
+        { value: 'v3', label: 'v3 - pas de copies d\'exercices d\'inspiration' },
       ],
     },
     'codestral': {
@@ -43,7 +44,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
         { value: 'v1', label: 'v1 - standard (extraction contenu -> génération éval)' },
         { value: 'v2', label: 'v2 - instructions dans system prompts' },
         { value: 'v3', label: 'v3 - extraction -> génération plan -> génération éval' },
-        { value: 'v4', label: 'v4 - v2 avec exemple' },
+        { value: 'v4', label: 'v4 - v3 avec one-shot prompting' },
         { value: 'v5', label: 'v5 - v4 avec CoT' },
         { value: 'v6', label: 'v6 - extraction -> plan -> éval -> corrections' },
       ],

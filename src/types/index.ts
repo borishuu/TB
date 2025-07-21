@@ -57,7 +57,6 @@ export interface GenerateOptions {
 }
 
 export interface GenerationResult {
-    context: string;
     evaluation: string;
     metadata: object;
 }

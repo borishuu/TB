@@ -15,7 +15,7 @@ class MistralGenerationHandler implements LLMGenerationHandler {
 
   public static getInstance(apiKey: string): MistralGenerationHandler {
     if (!MistralGenerationHandler.instance) {
-        MistralGenerationHandler.instance = new MistralGenerationHandler(apiKey);
+      MistralGenerationHandler.instance = new MistralGenerationHandler(apiKey);
     }
     return MistralGenerationHandler.instance;
   }
@@ -72,18 +72,36 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     return response.choices[0].message.content as string;
   }
 
-  private async generateEval(options: GenerateOptions, context: string, combinedInspirationContent: string): Promise<string> {
-    const evalPrompt = prompts.evalUserPromptTemplate(
-      context,
-      combinedInspirationContent
-    );
+  private async generateEvalPlan(options: GenerateOptions, context: string, combinedInspirationContent: string): Promise<string> {
+    const planPrompt = prompts.evalPlanificiationUserPromptTemplate(context, combinedInspirationContent);
 
     const response = await this.mistral.chat.complete({
       model: options.genModel,
       messages: [
         {
           role: 'system',
-          content: prompts.evalSystemPromptTemplate(combinedInspirationContent, options.globalDifficulty, options.questionTypes)
+          content: prompts.evalPlanificiationSystemPromptTemplate(options.globalDifficulty, options.questionTypes, combinedInspirationContent)
+        },
+        {
+          role: 'user',
+          content: planPrompt
+        }
+      ],
+      responseFormat: { type: 'json_object' }
+    });
+
+    return response.choices[0].message.content as string;
+  }
+
+  private async generateEvalFromPlan(options: GenerateOptions, planJSON: string, conxtextText: string, combinedInspirationContent: string): Promise<string> {
+    const evalPrompt = prompts.evalUserPromptTemplate(planJSON, conxtextText, combinedInspirationContent);
+
+    const response = await this.mistral.chat.complete({
+      model: options.genModel,
+      messages: [
+        {
+          role: 'system',
+          content: prompts.evalSystemPromptTemplate(combinedInspirationContent)
         },
         {
           role: 'user',
@@ -100,19 +118,31 @@ class MistralGenerationHandler implements LLMGenerationHandler {
     const combinedCourseContent = await this.combineFileContents(options.files.filter(f => f.contextType === 'course'));
     const combinedInspirationContent = await this.combineFileContents(options.files.filter(f => f.contextType === 'evalInspiration'));
 
+    // Prepare context
     const contextStart = performance.now();    
     const context = await this.generateContext(options, combinedCourseContent);
     const contextEnd = performance.now(); 
 
-    const evalStart = performance.now();    
-    const evaluation = await this.generateEval(options, context, combinedInspirationContent);
+    console.log(context);
+
+    // Generate plan  
+    const planStart = performance.now();    
+    const plan = await this.generateEvalPlan(options, context, combinedInspirationContent);    
+    const planEnd = performance.now();
+
+    console.log(plan);
+
+    // Generate evaluation
+    const evalStart = performance.now();
+    const evaluation = await this.generateEvalFromPlan(options, plan, context, combinedInspirationContent);
     const evalEnd = performance.now();
 
     return {
-      evaluation,
+      evaluation: evaluation,
       metadata: {
         generationPromptVersion: 'v4',
         contextTimeMs: Math.round(contextEnd - contextStart),
+        planTimeMs: Math.round(planEnd - planStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
         model: options.genModel,
       },

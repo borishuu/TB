@@ -114,10 +114,22 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
           }
       
           return (
-            <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props}>
-              {codeString}
-            </code>
-          );
+            <SyntaxHighlighter
+                style={materialLight}
+                language={match?.[1] || 'javascript'} 
+                PreTag="span"
+                customStyle={{
+                    display: 'inline',
+                    padding: '0.15em 0.3em',
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '4px',
+                    fontSize: '0.95em',
+                }}
+                {...props}
+            >
+                {codeString}
+            </SyntaxHighlighter>
+            );
         },
       
         p({ children, ...props }) {

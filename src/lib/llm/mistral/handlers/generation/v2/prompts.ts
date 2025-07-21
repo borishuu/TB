@@ -1,11 +1,5 @@
 const contextSystemPromptTemplate = () => `
-Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
-`;
-
-const contextUserPromptTemplate = (combinedFileContent: string) =>`
-Analysez attentivement le contenu des fichiers fournis.
-
-${combinedFileContent}
+Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte clair, structuré et utile à la conception d'une évaluation.
 
 Instructions :
 - Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
@@ -15,6 +9,12 @@ Instructions :
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+`;
+
+const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu des fichiers fournis.
+
+${combinedFileContent}
 `;
 
 const evalSystemPromptTemplate = ( 
@@ -42,33 +42,23 @@ Exemple :
 {
   "content": [
     {
-      "number": "Q1",
-      "questionText": "Qu'est-ce que la récursion ?",
-      "questionType": "open",
+      "number": "...",
+      "questionText": "...",
+      "questionType": "...",
       "options": [],
-      "correctAnswer": "La récursion est une méthode où une fonction s'appelle elle-même.",
-      "explanation": "La récursion permet de résoudre un problème en le divisant en sous-problèmes similaires."
+      "correctAnswer": "..."
     },
     {
-      "number": "Q2",
-      "questionText": "Quelle est la sortie du code suivant ?\\n\\nfunction f(n) {\\n  if (n <= 1) return 1;\\n  return n * f(n - 1);\\n}\\nf(3);",
-      "questionType": "codeComprehension",
-      "options": [],
-      "correctAnswer": "6",
-      "explanation": "La fonction calcule la factorielle : f(3) = 3 * 2 * 1 = 6."
-    },
-    {
-      "number": "Q3",
-      "questionText": "Choisissez les bonnes réponses concernant la récursion.",
+      "number": "...",
+      "questionText": "...",
       "questionType": "mcq",
       "options": [
-        "Elle nécessite toujours une condition d'arrêt.",
-        "Elle est plus rapide que l'itération dans tous les cas.",
-        "Elle peut mener à un dépassement de pile si mal utilisée.",
-        "Elle ne peut pas être utilisée pour parcourir des structures arborescentes."
+        "...",
+        "...",
+        "...",
+        "..."
       ],
-      "correctAnswer": "Elle nécessite toujours une condition d'arrêt.; Elle peut mener à un dépassement de pile si mal utilisée.",
-      "explanation": "Sans condition d'arrêt, la récursion boucle à l'infini et cause un dépassement de pile."
+      "correctAnswer": "...",
     }
   ]
 }
@@ -83,7 +73,8 @@ Générez une évaluation basée sur le contexte suivant :
 ${contextText}
 
 ${combinedInspirationContent !== "" ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+- Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+- **N'utilisez pas directement les exercices ou leurs énoncés présents dans les fichiers d'inspiration.** Les questions générées doivent être **originales**, même si elles s'inspirent de styles.
 ${combinedInspirationContent}
 ` : ''}
 `;

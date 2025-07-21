@@ -32,10 +32,6 @@ export const questionSchema: Schema = {
           type: SchemaType.STRING,
           description: "The correct answer for the question.",
           nullable: false
-      },
-      explanation: {
-          type: SchemaType.STRING,
-          description: "An explanation for the correct answer."
       }
   },
   required: ["number", "questionText", "questionType", "correctAnswer"]
