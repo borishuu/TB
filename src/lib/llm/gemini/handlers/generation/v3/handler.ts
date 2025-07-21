@@ -6,6 +6,7 @@ import * as responseSchemas from '@/lib/llm/gemini/ResponseSchemas';
 import { prompts } from './prompts';
 import fs from 'fs';
 import path from 'path';
+import { setProgress } from '@/lib/progressStore';
 
 class GeminiGenerateHandler implements LLMGenerationHandler {
   private static instance: GeminiGenerateHandler | null = null;
@@ -120,10 +121,12 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
     const contextPromptTemplate = prompts.contextPromptTemplate;
     const evalPromptTemplate = prompts.evalPromptTemplate;
 
+    setProgress(options.generationId, 'context');
     const contextStart = performance.now();
     const context = await this.generateContext(options, uploadedFiles.filter(f => f.contextType === 'course'), contextPromptTemplate);
     const contextEnd = performance.now();
 
+    setProgress(options.generationId, 'evaluation');
     const evalStart = performance.now();
     const evaluation = await this.generateEval(context, options, uploadedFiles.filter(f => f.contextType === 'evalInspiration'), evalPromptTemplate);
     const evalEnd = performance.now();

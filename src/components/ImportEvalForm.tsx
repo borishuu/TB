@@ -191,7 +191,7 @@ export default function ImportEvalForm({ courses }: { courses: Course[] }) {
                 <div className="mt-4 flex flex-wrap gap-3">
                   <div className="relative">
                     <BaseFileCard
-                      file={{ id: 1, fileName: importFile.name, course: {}, createdAt: '' }}
+                      file={{ id: 1, fileName: importFile.name, course: {}, createdAt: '', }}
                       onDelete={removeFile}
                     />
                   </div>

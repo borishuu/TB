@@ -2,6 +2,8 @@ import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 import { FileWithContext } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import { setProgress } from '@/lib/progressStore';
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
@@ -15,6 +17,7 @@ export async function POST(request: NextRequest) {
     const model = form.get("model") as string;
     const prompts = form.get("prompts") as string;
     const courseIdStr = form.get("courseId") as string;
+    const generationId = form.get("generationId") as string
 
     try {
         if (!title) {
@@ -95,9 +98,9 @@ export async function POST(request: NextRequest) {
             } as FileWithContext))
         ];
 
-        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, genModel: model });
+        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, genModel: model, generationId });
      
-
+        setProgress(generationId, 'done');
         // Ensure quizText is valid JSON before saving
         let quizJSON;
         try {

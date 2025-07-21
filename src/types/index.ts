@@ -29,7 +29,7 @@ export interface PoolFile {
     course: object;
     createdAt: string;
     filePath?: string;
-    contextType: ContextType;
+    contextType?: ContextType;
 }
 
 export interface Course {
@@ -54,6 +54,7 @@ export interface GenerateOptions {
     files: FileWithContext[];
     questionTypes: string[];
     globalDifficulty: string;
+    generationId: string;
 }
 
 export interface GenerationResult {

@@ -1,7 +1,7 @@
 'use client';
 
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FileWithCheckbox from '@/components/FileWithCheckbox';
 import CourseDropdown from '@/components/CourseDropdown';
@@ -25,6 +25,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const [newCourseName, setNewCourseName] = useState('');
   const [allPoolFiles, setAllPoolFiles] = useState<PoolFile[]>([]);
   const [showPoolModal, setShowPoolModal] = useState(false);
+  const [phase, setPhase] = useState<string | null>(null);
   const localInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
@@ -54,18 +55,45 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const availablePrompts = models[modelKey]?.prompts || [];
   const model = models[modelKey]?.model || '';
 
+  /*useEffect(() => {
+    if (!generationId) return;
+  
+    const sse = new EventSource(`/api/generation/progress?id=${generationId}`);
+    sse.onmessage = (event) => {
+      const { phase } = JSON.parse(event.data);
+      setStatus(phase); // or handle UI updates
+      if (phase === 'done' || phase === 'error') sse.close();
+    };
+  
+    return () => sse.close();
+  }, [generationId]);*/
+  
+  
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      const res = await fetch('/api/eval/generation/start', { method: 'POST' });
+      const { generationId } = await res.json();
+
+      const sse = new EventSource(`/api/eval/generation/progress?id=${generationId}`);
+      sse.onmessage = (event) => {
+        const { phase } = JSON.parse(event.data);
+        setPhase(phase);
+        console.log("Phase:", phase);
+      };
+
+
       const formData = new FormData();
       formData.append('title', title);
       formData.append('difficulty', difficulty);
       formData.append('model', model);   
       formData.append('prompts', prompts);
       formData.append('courseId', String(selectedCourse || ''));
+      formData.append('generationId', generationId)
       topics.forEach((topic) => formData.append('topics', topic));
       questionTypes.forEach((type) => formData.append('questionTypes', type));
       suggestedFiles.forEach((file) => formData.append('suggestedFileIds', String(file.id)));
@@ -455,10 +483,17 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       </div>
 
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
+      //<div className="absolute inset-0 flex items-center justify-center rounded-lg flex-col gap-2 bg-black/80 backdrop-blur-sm">
+      <div className="absolute inset-0 flex items-center justify-center rounded-lg flex-col gap-2">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-gray-700 text-xl font-bold">
+          {phase === 'context' && 'Extraction du contexte...'}
+          {phase === 'evaluation' && 'Génération de l\'évaluation...'}
+          {!phase && 'Préparation...'}
+        </p>
+      </div>
+    )}
+
       {showPoolModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-2xl p-6 rounded-lg shadow-lg overflow-y-auto max-h-[80vh]">
