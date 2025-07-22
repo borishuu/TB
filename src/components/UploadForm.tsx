@@ -3,6 +3,8 @@
 import { useRef, useState } from 'react';
 import { Course } from '@/types';
 import CourseDropdown from '@/components/CourseDropdown';
+import FileDropZone from '@/components/FileDropZone';
+import BaseFileCard from '@/components/BaseFileCard';
 
 interface UploadFormProps {
   onClose: () => void;
@@ -99,45 +101,32 @@ export default function UploadForm({ onClose, onSuccess, courses }: UploadFormPr
         />
       </div>
 
-      <div
-        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer ${
-          dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-        } transition-all`}
+      <FileDropZone
+        title="Fichiers"
+        description="Glissez-déposez des fichiers ici, ou"
+        files={uploadFiles.map((file, index) => ({
+          id: index,
+          fileName: file.name,
+          course: {},
+          createdAt: '',
+          contextType: 'course',
+        }))}
+        variant='simple'
+        onDelete={removeFile}
+        onCheckboxChange={() => {}}
+        onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <p className="text-gray-500">
-          Ajouter un fichier, <span className="text-blue-600 underline">parcourir</span>
-        </p>
-      </div>
-
-      {uploadFiles.length > 0 && (
-        <div className="mt-2">
-          <ul className="mt-2 space-y-2">
-            {uploadFiles.map((file, index) => (
-              <li key={index} className="flex items-center justify-between p-2 bg-gray-100 rounded">
-                <span className="text-sm text-gray-800">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="text-red-500 hover:text-red-700 text-sm"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        onBrowseClick={() => inputRef.current?.click()}
+        borderActive={dragActive}
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       <div className="text-right mt-2">
         <button

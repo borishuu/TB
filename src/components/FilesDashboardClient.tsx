@@ -49,7 +49,7 @@ export default function FilesDashboardClient({ files: initialFiles, courses }: F
           onClick={() => setShowModal(true)}
           className="button"
         >
-          Ajouter un fichier
+          Ajouter des fichiers
         </button>
       </div>
 

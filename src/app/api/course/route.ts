@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
          
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Failed to fetch courses" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur dans la récupération des cours" }, { status: 500 });
     } finally {
     }
 }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       const { name } = body;
   
       if (!name || typeof name !== 'string' || name.trim() === '') {
-        return NextResponse.json({ error: 'Invalid course name' }, { status: 400 });
+        return NextResponse.json({ error: 'Nom de cours invalide' }, { status: 400 });
       }
   
       // Check if course with this name already exists to avoid duplicates

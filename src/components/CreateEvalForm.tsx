@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FileWithCheckbox from '@/components/FileWithCheckbox';
 import CourseDropdown from '@/components/CourseDropdown';
+import FileDropZone from '@/components/FileDropZone';
 import { LocalFile, PoolFile, Course } from '@/types';
 
 export default function CreateEvalForm({ courses }: { courses: Course[] }) {
@@ -396,7 +397,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           </div>
 
           {/* Suggested Files */}
-          <div>
+          {/*<div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers depuis mon pool</label>
             <button
               type="button"
@@ -424,10 +425,22 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                 </div>
               )}
             </div>
-          </div>
+          </div>*/}
+          <FileDropZone
+            title="Fichiers depuis mon pool"
+            description="Recherche automatique depuis les sujets donnés, ou"
+            files={suggestedFiles}
+            variant='checkbox'
+            onDelete={(index) => removeSuggestedFile(suggestedFiles[index].id)}
+            onCheckboxChange={changePoolFileContextType}
+            showFindButton
+            onFindClick={handleFindCorrespondingFiles}
+            onBrowseClick={handleBrowsePoolFiles}
+          />
+
 
           {/* Local Files */}
-          <div>
+          {/*<div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers locaux</label>
             <div
               className={`border-2 border-dashed rounded-lg p-4 text-center ${
@@ -470,7 +483,27 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                 </div>
               )}
             </div>
-          </div>
+          </div>*/}
+          <FileDropZone
+            title="Fichiers locaux"
+            description="Glissez-déposez des fichiers ici, ou"
+            files={files.map((file, index) => ({
+              id: index,
+              fileName: file.file.name,
+              course: {},
+              createdAt: '',
+              contextType: 'course',
+            }))}
+            variant='checkbox'
+            onDelete={removeFile}
+            onCheckboxChange={changeLocalFileContextType}
+            onDrop={handleLocalDrop}
+            onDragOver={handleLocalDragOver}
+            onDragLeave={handleLocalDragLeave}
+            onBrowseClick={() => localInputRef.current?.click()}
+            borderActive={localDragActive}
+          />
+
 
           <button
             type="submit"
