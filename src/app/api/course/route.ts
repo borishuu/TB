@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       });
   
       if (existing) {
-        return NextResponse.json({ error: 'Course with this name already exists' }, { status: 409 });
+        return NextResponse.json({ error: 'Un cours avec le même nom exist déjà' }, { status: 409 });
       }
   
       const newCourse = await prisma.course.create({
@@ -42,8 +42,7 @@ export async function POST(request: NextRequest) {
   
       return NextResponse.json(newCourse, { status: 201 });
     } catch (error) {
-      console.error('Error creating course:', error);
-      return NextResponse.json({ error: 'Failed to create course' }, { status: 500 });
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
     }
   }
   

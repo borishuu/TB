@@ -7,7 +7,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const { id } = await params;
         const evalId = parseInt(id, 10);
         if (isNaN(evalId)) {
-            return NextResponse.json({ error: "Invalid evaluation ID" }, { status: 400 });
+            return NextResponse.json({ error: "ID d'évaluation invalide" }, { status: 400 });
         }
 
         // Fetch the original evaluation with its current version
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         });
 
         if (!originalEval || !originalEval.currentVersion) {
-            return NextResponse.json({ error: "Evaluation or its current version not found" }, { status: 404 });
+            return NextResponse.json({ error: "Evaluation pas toruvée" }, { status: 404 });
         }
 
         // Create duplicated evaluation
@@ -53,7 +53,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json(updatedEval, { status: 201 });
 
     } catch (error) {
-        console.error("Error duplicating evaluation:", error);
-        return NextResponse.json({ error: "Failed to duplicate evaluation" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

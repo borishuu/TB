@@ -2,8 +2,31 @@ import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 import { FileWithContext } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
 import { setProgress } from '@/lib/progressStore';
+
+export async function GET(request: NextRequest) {
+    
+    try {
+        const userQuizzes = await prisma.evaluation.findMany({
+            include: {
+                currentVersion: true,
+                course: {
+                    select: {
+                        courseName: true
+                    }
+                },
+            }
+            
+        });
+
+        return NextResponse.json(userQuizzes, { status: 200 });
+         
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    } finally {
+    }
+}
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
@@ -57,7 +80,7 @@ export async function POST(request: NextRequest) {
         try {
             parsedMeta = JSON.parse(contentFilesMeta);
         } catch (e) {
-            return NextResponse.json({ error: 'Invalid contentFilesMeta JSON' }, { status: 400 });
+            return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
         }
 
         // Parse pool file metadata
@@ -65,7 +88,7 @@ export async function POST(request: NextRequest) {
         try {
             parsedPoolMeta = JSON.parse(poolFilesMeta);
         } catch (e) {
-            return NextResponse.json({ error: 'Invalid poolFilesMeta JSON' }, { status: 400 });
+            return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
         }
 
         const generationHandler = await getGenerationHandler(model, prompts);
@@ -139,6 +162,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(evaluation.id);
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Erreur dans la génération de l'évaluation" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

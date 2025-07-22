@@ -5,6 +5,31 @@ import fs from 'fs/promises';
 import path from 'path';
 import pdfParse from 'pdf-parse';
 
+export async function GET(request: NextRequest) {
+    
+  try {
+      const files = await prisma.file.findMany({
+          select: {
+              id: true,
+              fileName: true,
+              course: {
+                  select: {
+                      courseName: true
+                  }
+              },
+              createdAt: true
+          },
+      })
+
+      return NextResponse.json(files, { status: 200 })
+       
+  } catch (error) {
+      console.log(error);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  } finally {
+  }
+}
+
 export async function POST(request: NextRequest) {
   const form = await request.formData();
 
@@ -12,9 +37,8 @@ export async function POST(request: NextRequest) {
   const contentFiles = form.getAll('files') as File[];
 
   try {
-    if (!contentFiles || contentFiles.length === 0) {
-      console.log("No files provided");
-      return NextResponse.json({ error: "Files must be provided" }, { status: 400 });
+    if (!contentFiles || contentFiles.length === 0) {      
+      return NextResponse.json({ error: "Aucun fichier fourni" }, { status: 400 });
     }
 
     const insertedFileNames: string[] = [];
@@ -49,8 +73,7 @@ export async function POST(request: NextRequest) {
 
         insertedFileNames.push(file.name);
       } catch (err) {
-        console.error("Error processing file:", file.name, err);
-        return NextResponse.json({ error: `Failed to parse PDF file: ${file.name}` }, { status: 400 });
+        return NextResponse.json({ error: `Erreur pasrsing de fichier : ${file.name}` }, { status: 400 });
       }
     }
 
@@ -68,6 +91,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(insertedFiles, { status: 200 });
   } catch (error) {
     console.log(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
