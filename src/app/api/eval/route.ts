@@ -10,11 +10,7 @@ export async function GET(request: NextRequest) {
         const userQuizzes = await prisma.evaluation.findMany({
             include: {
                 currentVersion: true,
-                course: {
-                    select: {
-                        courseName: true
-                    }
-                },
+                course: true
             }
             
         });

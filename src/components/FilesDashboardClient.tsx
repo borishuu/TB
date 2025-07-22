@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import File from '@/components/File';
-import UploadForm from '@/components/UploadForm';
+import UploadForm from '@/components/forms/UploadForm';
 import { PoolFile, Course } from '@/types';
 
 interface FilesDashboardClientProps {

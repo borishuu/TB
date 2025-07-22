@@ -1,9 +1,11 @@
 import { fetchEvals } from '@/lib/dataFetch/evals';
+import { fetchCourses } from '@/lib/dataFetch/courses';
 import Link from 'next/link';
 import EvalsGrid from '@/components/EvalsGrid';
 
 export default async function EvaluationsDashboard() {
     const evaluations = await fetchEvals();
+    const courses = await fetchCourses();
 
     return (
         <div className="max-w-full mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -18,7 +20,7 @@ export default async function EvaluationsDashboard() {
                 </Link>
             </div>
 
-            <EvalsGrid evaluations={evaluations} />
+            <EvalsGrid courses={courses} evaluations={evaluations} />
         </div>
     );
 }

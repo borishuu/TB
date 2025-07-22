@@ -6,7 +6,7 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 export async function fetchEvals(): Promise<Eval[]> {
     const cookieStore = await cookies();
 
-    const response = await fetch(`${baseUrl}/api/user/eval`, {
+    const response = await fetch(`${baseUrl}/api/eval`, {
         headers: {
             Cookie: cookieStore.toString(),
         },

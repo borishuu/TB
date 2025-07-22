@@ -1,16 +1,35 @@
 'use client';
 
-import { Eval } from '@/types';
+import { Eval, Course } from '@/types';
 import { useState } from 'react';
 import EvalCard from '@/components/EvalCard';
+import EditEvalForm from '@/components/forms/EditEvalForm';
 
-export default function EvalsGrid({ evaluations }: { evaluations: Eval[] }) {
+interface EvalGridProps {
+  evaluations: Eval[];
+  courses: Course[];
+}
+
+export default function EvalsGrid({ evaluations, courses }: EvalGridProps) {
+    const [editingEval, setEditingEval] = useState<Eval | null>(null);
     const [search, setSearch] = useState('');
     const [evalList, setEvalList] = useState(evaluations);
   
     const filtered = evalList.filter((ev) =>
         ev.title.toLowerCase().includes(search.toLowerCase())
     );
+
+    const handleEditStart = (evalToEdit: Eval) => {
+      console.log("evalsgrid");
+      setEditingEval(evalToEdit);
+    };
+  
+    const handleEditSuccess = (updatedEval: Eval) => {
+      setEvalList(prev =>
+        prev.map(e => (e.id === updatedEval.id ? updatedEval : e))
+      );
+      setEditingEval(null);
+    };
 
     const handleDelete = (id: number) => {
       setEvalList((prev) => prev.filter((ev) => ev.id !== id));
@@ -38,6 +57,7 @@ export default function EvalsGrid({ evaluations }: { evaluations: Eval[] }) {
               <EvalCard
               key={ev.id}
               evaluation={ev}
+              onEdit={() => handleEditStart(ev)}
               onDelete={() => handleDelete(ev.id)}
               onDuplicate={handleDuplicate}
             />
@@ -46,6 +66,17 @@ export default function EvalsGrid({ evaluations }: { evaluations: Eval[] }) {
         ) : (
           <p className="text-center">Aucune évaluation trouvée.</p>
         )}
+
+      {editingEval && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <EditEvalForm
+            evaluation={editingEval}
+            onClose={() => setEditingEval(null)}
+            onSuccess={(updated) => handleEditSuccess(updated)}
+            courses={courses}
+          />
+        </div>
+      )}
       </>
     );
   }

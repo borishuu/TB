@@ -1,4 +1,4 @@
-import ImportEvalForm from '@/components/ImportEvalForm';
+import ImportEvalForm from '@/components/forms/ImportEvalForm';
 import { fetchCourses } from '@/lib/dataFetch/courses';
 
 export default async function ImportEval() {

@@ -397,35 +397,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           </div>
 
           {/* Suggested Files */}
-          {/*<div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers depuis mon pool</label>
-            <button
-              type="button"
-              onClick={handleFindCorrespondingFiles}
-              className="button mb-4"
-            >
-              Chercher fichiers correspondants
-            </button>            
-            <div className="border-2 border-dashed rounded-lg p-4 text-center border-gray-300">
-              <p className="text-gray-500">
-                Recherche automatique depuis les sujets donnés, ou{' '}
-                <span className="text-blue-600 underline cursor-pointer" onClick={handleBrowsePoolFiles}>parcourir</span>
-              </p>
-              {suggestedFiles.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {suggestedFiles.map((file, index) => (
-                    <div key={file.id} className="relative">
-                      <FileWithCheckbox
-                        file={file}
-                        onDelete={() => removeSuggestedFile(file.id)}
-                        onCheckboxChange={() => changePoolFileContextType(index)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>*/}
           <FileDropZone
             title="Fichiers depuis mon pool"
             description="Recherche automatique depuis les sujets donnés, ou"
@@ -440,50 +411,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
 
           {/* Local Files */}
-          {/*<div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers locaux</label>
-            <div
-              className={`border-2 border-dashed rounded-lg p-4 text-center ${
-                localDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-              } transition-all`}
-              onDragOver={handleLocalDragOver}
-              onDragLeave={handleLocalDragLeave}
-              onDrop={handleLocalDrop}
-            >
-              <input
-                ref={localInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleLocalFileChange}
-              />
-              <p className="text-gray-500">
-                Glissez-déposez des fichiers ici, ou{' '}
-                <span
-                  className="text-blue-600 underline cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    localInputRef.current?.click();
-                  }}
-                >
-                  parcourir
-                </span>
-              </p>
-              {files.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {files.map((file, index) => (
-                    <div key={index} className="relative">
-                      <FileWithCheckbox
-                        file={{ id: index, fileName: file.file.name, course: {}, createdAt: '', contextType: 'course' }}
-                        onDelete={() => removeFile(index)}
-                        onCheckboxChange={() => changeLocalFileContextType(index)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>*/}
           <FileDropZone
             title="Fichiers locaux"
             description="Glissez-déposez des fichiers ici, ou"
@@ -503,7 +430,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
             onBrowseClick={() => localInputRef.current?.click()}
             borderActive={localDragActive}
           />
-
 
           <button
             type="submit"
