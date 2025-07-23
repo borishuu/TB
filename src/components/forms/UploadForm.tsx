@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import { Course } from '@/types';
 import CourseDropdown from '@/components/CourseDropdown';
 import FileDropZone from '@/components/FileDropZone';
-import BaseFileCard from '@/components/BaseFileCard';
 
 interface UploadFormProps {
   onClose: () => void;
@@ -13,16 +12,23 @@ interface UploadFormProps {
 }
 
 export default function UploadForm({ onClose, onSuccess, courses }: UploadFormProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<number | ''>('');
   const [newCourseName, setNewCourseName] = useState('');
   const [localCourses, setLocalCourses] = useState<Course[]>(courses);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFilesUpload = async () => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
     if (!uploadFiles.length || !selectedCourse) {
-      console.error('Please select a course and add files');
+      setError('Veuillez sélectionner un cours et ajouter des fichiers.');
+      setLoading(false);
       return;
     }
 
@@ -36,25 +42,19 @@ export default function UploadForm({ onClose, onSuccess, courses }: UploadFormPr
         body: formData,
       });
 
-      if (res.ok) {
-        const updatedFiles = await res.json();
-        onSuccess(updatedFiles);
-        onClose();
-      } else {
-        console.error('Upload failed');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Échec de l'upload des fichiers.");
       }
-    } catch (err) {
-      console.error('Upload error:', err);
+
+      const updatedFiles = await res.json();
+      onSuccess(updatedFiles);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Une erreur est survenue.');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = () => {
-    setDragActive(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -78,64 +78,83 @@ export default function UploadForm({ onClose, onSuccess, courses }: UploadFormPr
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl relative">
-      <button
-        onClick={onClose}
-        className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+    <div className="relative flex items-center justify-center">
+      <div
+        className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl transition-opacity duration-300 ${
+          loading ? 'pointer-events-none' : ''
+        }`}
       >
-        ✕
-      </button>
-
-      <h2 className="text-lg font-semibold mb-4">Uploader un fichier</h2>
-
-      <div className="mb-4">
-        <CourseDropdown
-          courses={localCourses}
-          value={selectedCourse}
-          newCourseName={newCourseName}
-          onChange={(selected, newName) => {
-            setSelectedCourse(selected);
-            setNewCourseName(newName);
-          }}
-          setCourses={setLocalCourses}
-        />
-      </div>
-
-      <FileDropZone
-        title="Fichiers"
-        description="Glissez-déposez des fichiers ici, ou"
-        files={uploadFiles.map((file, index) => ({
-          id: index,
-          fileName: file.name,
-          course: {},
-          createdAt: '',
-          contextType: 'course',
-        }))}
-        variant='simple'
-        onDelete={removeFile}
-        onCheckboxChange={() => {}}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onBrowseClick={() => inputRef.current?.click()}
-        borderActive={dragActive}
-      />
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
-      <div className="text-right mt-2">
         <button
-          onClick={handleFilesUpload}
-          className="button"
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
         >
-          Upload
+          ✕
         </button>
+        <h2 className="text-2xl font-bold text-center mb-6">Uploader des fichiers</h2>
+
+        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="mb-4">
+            <CourseDropdown
+              courses={localCourses}
+              value={selectedCourse}
+              newCourseName={newCourseName}
+              onChange={(selected, newName) => {
+                setSelectedCourse(selected);
+                setNewCourseName(newName);
+              }}
+              setCourses={setLocalCourses}
+            />
+          </div>
+
+          <div>
+            <FileDropZone
+              title="Fichiers"
+              description="Glissez-déposez des fichiers ici, ou"
+              files={uploadFiles.map((file, index) => ({
+                id: index,
+                fileName: file.name,
+                course: {},
+                createdAt: '',
+                contextType: 'course',
+              }))}
+              variant="simple"
+              onDelete={removeFile}
+              onCheckboxChange={() => {}}
+              onDrop={handleDrop}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onBrowseClick={() => inputRef.current?.click()}
+              borderActive={dragActive}
+            />
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full button"
+            disabled={loading || !selectedCourse || uploadFiles.length === 0}
+          >
+            {loading ? 'Upload en cours...' : 'Uploader'}
+          </button>
+        </form>
       </div>
+
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-lg">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
     </div>
   );
 }

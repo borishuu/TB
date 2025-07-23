@@ -1,12 +1,17 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import BaseFileCard from '@/components/BaseFileCard';
 import CourseDropdown from '@/components/CourseDropdown';
-import { Course } from '@/types';
+import { Course, Eval } from '@/types';
 
-export default function ImportEvalForm({ courses }: { courses: Course[] }) {
+interface ImportEvalFormProps {
+  courses: Course[];
+  onClose: () => void;
+  onSuccess: (evalId: number) => void;
+}
+
+export default function ImportEvalForm({ courses, onClose, onSuccess }: ImportEvalFormProps) {
   const [title, setTitle] = useState('');
   const [fileContent, setFileContent] = useState('');
   const [titleDisabled, setTitleDisabled] = useState(true);
@@ -19,13 +24,11 @@ export default function ImportEvalForm({ courses }: { courses: Course[] }) {
   const [importFile, setImportFile] = useState<File | null>(null);
   const localInputRef = useRef<HTMLInputElement>(null);
 
-  const router = useRouter();
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+  
     try {
       const formData = new FormData();
       formData.append('title', title);
@@ -33,25 +36,25 @@ export default function ImportEvalForm({ courses }: { courses: Course[] }) {
       if (importFile) {
         formData.append('content', fileContent);
       }
-
+  
       const response = await fetch('/api/eval/import', {
         method: 'POST',
         body: formData,
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Création de l\'évaluation a échoué');
+        throw new Error(errorData.error || 'Importation de l\'évaluation a échoué');
       }
-
+  
       const data = await response.json();
-      console.log(data);
-      router.push(`/eval/${data}`);
+      onSuccess(data);
     } catch (error: any) {
       setError(error.message);
       setLoading(false);
     }
   };
+  
 
   const handleLocalDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -126,9 +129,15 @@ export default function ImportEvalForm({ courses }: { courses: Course[] }) {
     <div className="relative flex items-center justify-center">
       <div
         className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl transition-opacity duration-300 ${
-          loading ? 'opacity-50 pointer-events-none' : ''
+          loading ? 'pointer-events-none' : ''
         }`}
       >
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
         <h2 className="text-2xl font-bold text-center mb-6">Importer une évaluation</h2>
 
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}

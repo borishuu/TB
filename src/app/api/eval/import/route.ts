@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
             where: { id: evaluation.id },
             data: {
                 currentVersion: { connect: { id: version.id } }
-            },
+            }
         });
 
         return NextResponse.json(evaluation.id);

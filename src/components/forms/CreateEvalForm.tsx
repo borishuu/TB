@@ -1,14 +1,19 @@
 'use client';
 
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import FileWithCheckbox from '@/components/FileWithCheckbox';
 import CourseDropdown from '@/components/CourseDropdown';
 import FileDropZone from '@/components/FileDropZone';
 import { LocalFile, PoolFile, Course } from '@/types';
 
-export default function CreateEvalForm({ courses }: { courses: Course[] }) {
+interface CreateEvalFormProps {
+  courses: Course[];
+  onClose: () => void;
+  onSuccess: (evalId: number) => void;
+}
+
+export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEvalFormProps) {
   const [title, setTitle] = useState('');
   const [topics, setTopics] = useState<string[]>([]);
   const [topicInput, setTopicInput] = useState<string>('');
@@ -16,8 +21,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [files, setFiles] = useState<LocalFile[]>([]);
   const [suggestedFiles, setSuggestedFiles] = useState<PoolFile[]>([]);
-  const [modelKey, setModelKey] = useState('gemini 2.5 flash');
-  const [prompts, setPrompts] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [localDragActive, setLocalDragActive] = useState(false);
@@ -29,9 +32,12 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const [phase, setPhase] = useState<string | null>(null);
   const localInputRef = useRef<HTMLInputElement>(null);
 
+  /*const [modelKey, setModelKey] = useState('gemini 2.5 flash');
+  const [prompts, setPrompts] = useState('');*/
+
   const router = useRouter();
 
-  const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
+  /*const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
     'gemini 2.5 flash': {
       model: 'models/gemini-2.5-flash',
       prompts: [
@@ -51,26 +57,18 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
         { value: 'v6', label: 'v6 - extraction -> plan -> éval -> corrections' },
       ],
     },
-  };
+  };*/
+  const questionTypeOptions = [
+    'Écriture de code',
+    'Compréhension de code',
+    'QCM',
+    'Question ouverte',
+  ];
 
-  const availablePrompts = models[modelKey]?.prompts || [];
-  const model = models[modelKey]?.model || '';
 
-  /*useEffect(() => {
-    if (!generationId) return;
+  //const availablePrompts = models[modelKey]?.prompts || [];
+  //const model = models[modelKey]?.model || '';
   
-    const sse = new EventSource(`/api/generation/progress?id=${generationId}`);
-    sse.onmessage = (event) => {
-      const { phase } = JSON.parse(event.data);
-      setStatus(phase); // or handle UI updates
-      if (phase === 'done' || phase === 'error') sse.close();
-    };
-  
-    return () => sse.close();
-  }, [generationId]);*/
-  
-  
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
@@ -91,8 +89,10 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('difficulty', difficulty);
-      formData.append('model', model);   
-      formData.append('prompts', prompts);
+      //formData.append('model', model);
+      formData.append('model', 'models/gemini-2.5-flash');      
+      //formData.append('prompts', prompts);
+      formData.append('prompts', 'v3');
       formData.append('courseId', String(selectedCourse || ''));
       formData.append('generationId', generationId)
       topics.forEach((topic) => formData.append('topics', topic));
@@ -123,8 +123,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       }
 
       const data = await response.json();
-      console.log(data);
-      router.push(`/eval/${data}`);
+      onSuccess(data);
     } catch (error: any) {
       setError(error.message);
       setLoading(false);
@@ -213,13 +212,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
     );
   };
 
-  const questionTypeOptions = [
-    'Écriture de code',
-    'Compréhension de code',
-    'QCM',
-    'Question ouverte',
-  ];
-
   const addTopic = () => {
     const newTopic = topicInput.trim();
     if (newTopic && !topics.includes(newTopic)) {
@@ -241,7 +233,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
   const handleBrowsePoolFiles = async () => {
     try {
-      const response = await fetch('/api/user/files');
+      const response = await fetch('/api/file');
       if (!response.ok) throw new Error('Erreur lors du chargement des fichiers');
       const data = await response.json();
       setAllPoolFiles(data);
@@ -253,7 +245,13 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
   return (
     <div className="relative flex items-center justify-center">
-      <div className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl max-h-[90vh] overflow-y-auto transition-opacity duration-300 ${loading ? 'pointer-events-none' : ''}`}>
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
         <h2 className="text-2xl font-bold text-center mb-6">Générer une évaluation</h2>
 
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
@@ -288,7 +286,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           </div>
 
           {/* LLM Model */}
-          <div>
+          {/*<div>
             <label className="block text-sm font-medium text-gray-700">Modèle LLM</label>
             <select
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -305,10 +303,10 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
               )}
 
             </select>
-          </div>
+          </div>*/}
 
           {/* Prompting */}
-          <div>
+          {/*<div>
             <label className="block text-sm font-medium text-gray-700">Version des prompts</label>
             <select
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -323,10 +321,10 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                 </option>
               ))}
             </select>
-          </div>
+          </div>*/}
 
           {/* Question Types */}
-          <div>
+          {<div>
             <label className="block text-sm font-medium text-gray-700">Types de questions</label>
             <div className="flex flex-wrap gap-4 mt-2">
               {questionTypeOptions.map((type) => (
@@ -341,7 +339,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                 </label>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* Course */}
           <div className="mb-4">
@@ -411,6 +409,13 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
 
           {/* Local Files */}
+          <input
+            type="file"
+            multiple
+            ref={localInputRef}
+            onChange={handleLocalFileChange}
+            className="hidden"
+          />
           <FileDropZone
             title="Fichiers locaux"
             description="Glissez-déposez des fichiers ici, ou"
@@ -434,7 +439,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           <button
             type="submit"
             className="w-full button"
-            disabled={loading || !prompts || !title || questionTypes.length === 0 || (files.length === 0 && suggestedFiles.length === 0)}
+            disabled={loading || !selectedCourse || !title || questionTypes.length === 0 || (files.length === 0 && suggestedFiles.length === 0)}
           >
             {loading ? 'Génération...' : 'Générer'}
           </button>
@@ -442,7 +447,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       </div>
 
       {loading && (
-      //<div className="absolute inset-0 flex items-center justify-center rounded-lg flex-col gap-2 bg-black/80 backdrop-blur-sm">
       <div className="absolute inset-0 flex items-center justify-center rounded-lg flex-col gap-2">
         <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         <p className="text-gray-700 text-xl font-bold">
