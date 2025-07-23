@@ -2,7 +2,6 @@
 
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import CourseDropdown from '@/components/CourseDropdown';
 import FileDropZone from '@/components/files/FileDropZone';
 import { LocalFile, PoolFile, Course } from '@/types';
@@ -19,6 +18,7 @@ export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEv
   const [topicInput, setTopicInput] = useState<string>('');
   const [difficulty, setDifficulty] = useState('medium');
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
+  const [questionCount, setQuestionCount] = useState<number>(10);
   const [files, setFiles] = useState<LocalFile[]>([]);
   const [suggestedFiles, setSuggestedFiles] = useState<PoolFile[]>([]);
   const [error, setError] = useState('');
@@ -33,9 +33,7 @@ export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEv
   const localInputRef = useRef<HTMLInputElement>(null);
 
   /*const [modelKey, setModelKey] = useState('gemini 2.5 flash');
-  const [prompts, setPrompts] = useState('');*/
-
-  const router = useRouter();
+  const [prompts, setPrompts] = useState('');*/  
 
   /*const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
     'gemini 2.5 flash': {
@@ -58,6 +56,7 @@ export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEv
       ],
     },
   };*/
+  
   const questionTypeOptions = [
     'Écriture de code',
     'Compréhension de code',
@@ -89,6 +88,7 @@ export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEv
       const formData = new FormData();
       formData.append('title', title);
       formData.append('difficulty', difficulty);
+      formData.append('questionCount', String(questionCount));
       //formData.append('model', model);
       formData.append('model', 'models/gemini-2.5-flash');      
       //formData.append('prompts', prompts);
@@ -269,21 +269,39 @@ export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEv
             />
           </div>
 
-          {/* Difficulty */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Difficulté globale</label>
-            <select
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-            >
-              <option value="very_easy">Très facile</option>
-              <option value="easy">Facile</option>
-              <option value="medium">Moyen</option>
-              <option value="hard">Difficile</option>
-              <option value="very_hard">Très difficile</option>
-            </select>
+          <div className="flex gap-4">
+            {/* Difficulty */}
+            <div className="w-1/2">
+              <label className="block text-sm font-medium text-gray-700">Difficulté globale</label>
+              <select
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+              >
+                <option value="very_easy">Très facile</option>
+                <option value="easy">Facile</option>
+                <option value="medium">Moyen</option>
+                <option value="hard">Difficile</option>
+                <option value="very_hard">Très difficile</option>
+              </select>
+            </div>
+
+            {/* Question Count */}
+            <div className="w-1/2">
+              <label className="block text-sm font-medium text-gray-700">Nombre de questions</label>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={questionCount}
+                onChange={(e) => setQuestionCount(Number(e.target.value))}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nombre de questions à générer"
+              />
+            </div>
           </div>
+
+
 
           {/* LLM Model */}
           {/*<div>
@@ -447,15 +465,18 @@ export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEv
       </div>
 
       {loading && (
-      <div className="absolute inset-0 flex items-center justify-center rounded-lg flex-col gap-2">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-gray-700 text-xl font-bold">
-          {phase === 'context' && 'Extraction du contexte...'}
-          {phase === 'evaluation' && 'Génération de l\'évaluation...'}
-          {!phase && 'Préparation...'}
-        </p>
-      </div>
-    )}
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="bg-gray-100 p-6 rounded-lg shadow-lg flex flex-col items-center gap-2">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-700 text-xl font-bold text-center">
+              {phase === 'context' && 'Extraction du contexte...'}
+              {phase === 'evaluation' && 'Génération de l\'évaluation...'}
+              {!phase && 'Préparation...'}
+            </p>
+          </div>
+        </div>
+      )}
+
 
       {showPoolModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import File from '@/components/File';
-import UploadForm from '@/components/forms/UploadForm';
+import BaseFileCard from '@/components/files/BaseFileCard';
+import UploadForm from '@/components/files/UploadForm';
 import { PoolFile, Course } from '@/types';
 
 interface FilesDashboardClientProps {
@@ -72,7 +72,7 @@ export default function FilesDashboardClient({ files: initialFiles, courses }: F
               {expandedCourses[course] && (
                 <div className="flex flex-wrap gap-4 mt-3 px-2">
                   {courseFiles.map((file) => (
-                    <File key={file.id} file={file} onDelete={handleDeleteFile} />
+                    <BaseFileCard key={file.id} file={file} onDelete={handleDeleteFile} />
                   ))}
                 </div>
               )}

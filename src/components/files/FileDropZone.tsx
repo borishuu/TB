@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import FileWithCheckbox from '@/components/FileWithCheckbox';
-import BaseFileCard from '@/components/BaseFileCard';
+import FileWithCheckbox from '@/components/files/FileWithCheckbox';
+import BaseFileCard from '@/components/files/BaseFileCard';
 
 interface FileDropZoneProps {
   title: string;

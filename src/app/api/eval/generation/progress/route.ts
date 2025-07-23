@@ -10,18 +10,33 @@ export async function GET(req: Request) {
 
   const stream = new ReadableStream({
     start(controller) {
-      const send = (data: string) => controller.enqueue(`data: ${data}\n\n`);
-
+      let closed = false;
+    
+      const send = (data: string) => {
+        if (!closed) {
+          try {
+            controller.enqueue(`data: ${data}\n\n`);
+          } catch (err) {
+            closed = true;
+            clearInterval(interval);
+            controller.close();
+          }
+        }
+      };
+    
       const interval = setInterval(() => {
         const phase = getProgress(generationId);
         if (phase) send(JSON.stringify({ phase }));
-
+    
         if (phase === 'done' || phase === 'error') {
           clearInterval(interval);
-          controller.close();
+          if (!closed) {
+            controller.close();
+            closed = true;
+          }
         }
       }, 500);
-    },
+    }    
   });
 
   return new Response(stream, {

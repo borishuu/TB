@@ -42,7 +42,7 @@ export const evalSchema: Schema = {
   properties: {
     content: {
       type: SchemaType.ARRAY,
-      minItems: 10,
+      minItems: 1,
       items: questionSchema,
     },
   },

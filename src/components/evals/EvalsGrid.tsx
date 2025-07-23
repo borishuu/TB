@@ -32,7 +32,7 @@ export default function EvalsGrid({ evaluations, courses }: EvalGridProps) {
     const handleNewStart = () => setShowNewForm(true);    
     const handleNewEnd = () => setShowNewForm(false);
     const handleNewSuccess = (id: number) => {
-      setShowNewForm(false)
+      //setShowNewForm(false)
       router.push(`/eval/${id}`);
     }
 

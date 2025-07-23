@@ -15,6 +15,7 @@ Objectif : produire un contexte qui permettrait à une IA de recevoir le context
 const evalPromptTemplate = (
   contextText: string,
   globalDifficulty: string,
+  questionCount: string,
   questionTypes: string[],
   withInspirationFiles: boolean,
 ) => `
@@ -27,7 +28,7 @@ Générez une évaluation basée sur le contexte suivant :
 ${contextText}
 
 Instructions :
-- Générez exactement 10 questions, couvrant l'ensemble des concepts abordés dans le contexte.
+- Générez exactement ${questionCount} questions, couvrant l'ensemble des concepts abordés dans le contexte.
 - L'ordre des questions doit être indépendant de celui des chapitres ou sections du contexte.
 - La difficulté globale de l'évaluation doit être : **${globalDifficulty}**. Ajustez la profondeur des questions, le degré de réflexion requis et la complexité des exemples en conséquence.
 - Vous devez utiliser uniquement les types de questions suivants (et les varier intelligemment) : ${questionTypes.join(", ")}.

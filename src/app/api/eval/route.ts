@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     const contentFilesMeta = form.get("contentFilesMeta") as string;
     const poolFilesMeta = form.get("poolFilesMeta") as string; 
     const globalDifficulty = form.get("difficulty") as string;
+    const questionCount = form.get("questionCount") as string;
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
     const model = form.get("model") as string;
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
             } as FileWithContext))
         ];
 
-        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, genModel: model, generationId });
+        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, questionCount, genModel: model, generationId });
      
         setProgress(generationId, 'done');
         // Ensure quizText is valid JSON before saving

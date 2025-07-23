@@ -54,6 +54,7 @@ export interface GenerateOptions {
     files: FileWithContext[];
     questionTypes: string[];
     globalDifficulty: string;
+    questionCount: string;
     generationId: string;
 }
 

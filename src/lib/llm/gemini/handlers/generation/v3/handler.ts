@@ -87,33 +87,26 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
       },
     });
 
-    if (uploadedInspirationFiles.length > 0) {
-      console.log("Inspiration files detected, using with context prompt.");
+    if (uploadedInspirationFiles.length > 0) {      
       const fileData = uploadedInspirationFiles.map((r) => ({ fileData: { 
         fileUri: r.uri, 
         mimeType: r.mimeType },
-      }))
-      
-      //const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(true), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, true));
+      }))          
       const result = await model.generateContent([ 
-        evalPromptTemplate(context, options.globalDifficulty, options.questionTypes, true),
+        evalPromptTemplate(context, options.globalDifficulty, options.questionCount, options.questionTypes, true),
         ...fileData 
       ]);
       return result.response.text();
 
-    } else {
-      console.log("No inspiration files dtected.");
-      //const evalPrompt = this.combinePropts(prompts.evalSystemPrompt(false), prompts.evalUserPromptTemplate(context, options.globalDifficulty, options.questionTypes, false));
-
-      const result = await model.generateContent([ evalPromptTemplate(context, options.globalDifficulty, options.questionTypes, false) ]);
+    } else {            
+      const result = await model.generateContent([ evalPromptTemplate(context, options.globalDifficulty, options.questionCount, options.questionTypes, false) ]);
       return result.response.text();
     }
   }
 
   async generateEvaluation(options: GenerateOptions): Promise<GenerationResult> {
     const uploadedFiles = await this.uploadFiles(options.files);
-
-    console.log("ok");
+    
     if (uploadedFiles.some(f => f.contextType === 'evalInspiration')) {
       console.log("Inspiration files detected, using with context prompt.");
     }
@@ -134,7 +127,7 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
     return {
       evaluation,
       metadata: {
-        generationPromptVersion: 'v2',
+        generationPromptVersion: 'v3',
         contextTimeMs: Math.round(contextEnd - contextStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
         model: options.genModel,
