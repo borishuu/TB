@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import BaseFileCard from '@/components/BaseFileCard';
 import CourseDropdown from '@/components/CourseDropdown';
 import { Course, Eval } from '@/types';
 

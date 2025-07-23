@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { Course } from '@/types';
 import CourseDropdown from '@/components/CourseDropdown';
-import FileDropZone from '@/components/FileDropZone';
+import FileDropZone from '@/components/files/FileDropZone';
 
 interface UploadFormProps {
   onClose: () => void;

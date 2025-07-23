@@ -1,7 +1,7 @@
 import { fetchEvals } from '@/lib/dataFetch/evals';
 import { fetchCourses } from '@/lib/dataFetch/courses';
 import Link from 'next/link';
-import EvalsGrid from '@/components/EvalsGrid';
+import EvalsGrid from '@/components/evals/EvalsGrid';
 
 export default async function EvaluationsDashboard() {
     const evaluations = await fetchEvals();

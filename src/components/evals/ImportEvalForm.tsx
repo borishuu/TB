@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import BaseFileCard from '@/components/BaseFileCard';
+import BaseFileCard from '@/components/files/BaseFileCard';
 import CourseDropdown from '@/components/CourseDropdown';
 import { Course, Eval } from '@/types';
 

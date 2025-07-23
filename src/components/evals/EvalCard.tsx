@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Eval } from '@/types';
-import EvalMenu from '@/components/EvalMenu';
+import EvalMenu from '@/components/evals/EvalMenu';
 
 interface EvalCardProps {
   evaluation: Eval;

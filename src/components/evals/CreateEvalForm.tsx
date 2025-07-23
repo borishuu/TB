@@ -4,7 +4,7 @@ import { XMarkIcon } from '@heroicons/react/24/solid';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CourseDropdown from '@/components/CourseDropdown';
-import FileDropZone from '@/components/FileDropZone';
+import FileDropZone from '@/components/files/FileDropZone';
 import { LocalFile, PoolFile, Course } from '@/types';
 
 interface CreateEvalFormProps {

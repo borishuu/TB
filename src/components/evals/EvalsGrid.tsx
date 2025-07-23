@@ -3,10 +3,10 @@
 import { Eval, Course } from '@/types';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import EvalCard from '@/components/EvalCard';
-import CreateEvalForm from '@/components/forms/CreateEvalForm';
-import ImportEvalForm from '@/components/forms/ImportEvalForm';
-import EditEvalForm from '@/components/forms/EditEvalForm';
+import EvalCard from '@/components/evals/EvalCard';
+import CreateEvalForm from '@/components/evals/CreateEvalForm';
+import ImportEvalForm from '@/components/evals/ImportEvalForm';
+import EditEvalForm from '@/components/evals/EditEvalForm';
 
 interface EvalGridProps {
   evaluations: Eval[];

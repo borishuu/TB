@@ -1,4 +1,4 @@
-import FilesDashboardClient from '@/components/FilesDashboardClient';
+import FilesDashboardClient from '@/components/files/FilesDashboardClient';
 import { fetchFiles } from '@/lib/dataFetch/files';
 import { fetchCourses } from '@/lib/dataFetch/courses';
 
