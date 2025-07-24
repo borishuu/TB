@@ -4,11 +4,13 @@ import { EllipsisHorizontalIcon } from '@heroicons/react/24/solid';
 import { useState, useRef, useEffect } from 'react';
 
 interface EvalMenuProps {
+  onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onDownload: () => void;
 }
 
-export default function EvalMenu({ onDelete, onDuplicate }: EvalMenuProps) {
+export default function EvalMenu({ onEdit, onDelete, onDuplicate, onDownload }: EvalMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +28,7 @@ export default function EvalMenu({ onDelete, onDuplicate }: EvalMenuProps) {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="p-2 rounded-full hover:bg-gray-200"
+        className="p-2 rounded-full hover:bg-gray-200 cursor-pointer"
       >
         <EllipsisHorizontalIcon className="h-5 w-5" />
       </button>
@@ -34,7 +36,16 @@ export default function EvalMenu({ onDelete, onDuplicate }: EvalMenuProps) {
       {open && (
         <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-md rounded-md z-10">
           <button
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
+            onClick={() => {
+              setOpen(false);
+              onEdit();
+            }}
+          >
+            Modifier
+          </button>
+          <button
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
             onClick={() => {
               setOpen(false);
               onDelete();
@@ -43,13 +54,22 @@ export default function EvalMenu({ onDelete, onDuplicate }: EvalMenuProps) {
             Supprimer
           </button>
           <button
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
             onClick={() => {
               setOpen(false);
               onDuplicate();
             }}
           >
             Dupliquer
+          </button>
+          <button
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 cursor-pointer"
+            onClick={() => {
+              setOpen(false);
+              onDownload();
+            }}
+          >
+            Télécharger (JSON)
           </button>
         </div>
       )}

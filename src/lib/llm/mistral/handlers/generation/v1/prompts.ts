@@ -1,5 +1,5 @@
 const contextSystemPromptTemplate = () => `
-Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
+Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un context claire, structurée et utile à la conception d'une évaluation.
 `;
 
 const contextUserPromptTemplate = (combinedFileContent: string) =>`
@@ -83,11 +83,10 @@ Exemple :
 }
 
 ${combinedInspirationContent !== "" ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
+- Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+- **N'utilisez pas directement les exercices ou leurs énoncés présents dans les fichiers d'inspiration.** Les questions générées doivent être **originales**, même si elles s'inspirent de styles.
 ${combinedInspirationContent}
 ` : ''}
-
-Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.
 `;
 
 

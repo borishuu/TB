@@ -1,21 +1,14 @@
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-//import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
 import { getRegenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
         const { id } = await params;
-        const quizId = parseInt(id, 10);
-        if (isNaN(quizId)) {
-            return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });
+        const evalId = parseInt(id, 10);
+        if (isNaN(evalId)) {
+            return NextResponse.json({ error: "ID d'évaluation invalide" }, { status: 400 });
         }
 
         // Expecting the question number and a prompt for regeneration
@@ -23,26 +16,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { questionNumber, prompt } = body;
 
         if (!questionNumber || !prompt) {
-            return NextResponse.json({ error: "Both questionNumber and prompt are required" }, { status: 400 });
+            return NextResponse.json({ error: "Prompt et numéro de question nécessaire" }, { status: 400 });
         }
 
-        // Fetch the existing quiz
-        const quiz = await prisma.quiz.findUnique({
-            where: { id: quizId },
+        // Fetch the existing evaluation
+        const evaluation = await prisma.evaluation.findUnique({
+            where: { id: evalId },
+            include: {
+                currentVersion: true,
+            }
         });
 
-        if (!quiz) {
-            return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+        if (!evaluation || !evaluation.currentVersion) {
+            return NextResponse.json({ error: "Evaluation pas toruvée" }, { status: 404 });
         }
 
-        const quizContentObject = quiz.content as Prisma.JsonObject;
+        const quizContentObject = evaluation.currentVersion.content as Prisma.JsonObject;
         const currentContent = quizContentObject['content'] as Prisma.JsonArray;
 
         // Find the question to regenerate
         const questionIndex = currentContent.findIndex((q: any) => q.number === questionNumber);
 
         if (questionIndex === -1) {
-            return NextResponse.json({ error: "Question not found" }, { status: 404 });
+            return NextResponse.json({ error: "Question pas trouvée" }, { status: 404 });
         }
 
         const llmHandler = await getRegenerationHandler('models/gemini-2.5-flash', 'v1');
@@ -50,33 +46,48 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const newQuestion = await llmHandler.regenerateQuestion({ genModel: 'models/gemini-2.5-flash', prompt, question: currentContent[questionIndex] });
 
         if (!newQuestion) {
-            return NextResponse.json({ error: "Failed to generate new question" }, { status: 500 });
+            return NextResponse.json({ error: "Erreur dans la génération de la question" }, { status: 500 });
         }
 
         let questionJSON;
         try {
             questionJSON = JSON.parse(newQuestion);
-        } catch (error) {
-            console.error("Invalid JSON format:", error);
-            return NextResponse.json({ error: "Generated quiz is not valid JSON" }, { status: 500 });
+        } catch (error) {            
+            return NextResponse.json({ error: "JSON invalide" }, { status: 500 });
         }
 
         // Replace the old question with the regenerated one
         currentContent[questionIndex] = questionJSON;
 
-        console.log(currentContent);
+        const previousVersionInfo = evaluation.currentVersion.versionInfo as Prisma.JsonObject | null;
+        const previousNumber = previousVersionInfo?.versionNumber as number | undefined;
+        const nextVersionNumber = (previousNumber ?? 0) + 1;
 
-        // Update the quiz in the database
-        const updatedQuiz = await prisma.quiz.update({
-            where: { id: quizId },
+        // Create new evaluation version
+        const newVersion = await prisma.evaluationVersion.create({
             data: {
-                content: { content: currentContent }
+                content: {
+                    content: currentContent
+                },
+                evaluation: {
+                    connect: { id: evalId }
+                },
+                versionInfo: { versionNumber: nextVersionNumber, info: `Régénération de la question ${questionNumber}`}
             }
         });
 
-        return NextResponse.json(questionJSON, { status: 200 });
-    } catch (error) {
-        console.error("Error updating quiz:", error);
-        return NextResponse.json({ error: "Failed to update quiz" }, { status: 500 });
+        // Update evaluation to point to new version
+        await prisma.evaluation.update({
+            where: { id: evalId },
+            data: {
+                currentVersion: {
+                    connect: { id: newVersion.id }
+                }
+            }
+        });
+
+        return NextResponse.json({ newVersion }, { status: 200 });
+    } catch (error) {        
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

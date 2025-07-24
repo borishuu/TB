@@ -1,39 +1,50 @@
 import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
-//import { GeminiHandler } from '@/lib/llm/gemini/GeminiHandler';
-//import { MistralHandler } from '@/lib/llm/mistral/MistralHandler';
 import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 import { FileWithContext } from '@/types';
+import { setProgress } from '@/lib/progressStore';
+
+export async function GET(request: NextRequest) {
+    
+    try {
+        const evals = await prisma.evaluation.findMany({
+            include: {
+                currentVersion: true,
+                course: true
+            }
+            
+        });
+
+        return NextResponse.json(evals, { status: 200 });
+         
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    } finally {
+    }
+}
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
     const title = form.get('title') as string;
-    const contentFiles = form.getAll("contentFiles") as File[];
-    const contentFilesMeta = form.get("contentFilesMeta") as string; 
+    const localFiles = form.getAll("contentFiles") as File[];
+    const localFilesMeta = form.get("contentFilesMeta") as string;
+    const poolFilesMeta = form.get("poolFilesMeta") as string; 
     const globalDifficulty = form.get("difficulty") as string;
+    const questionCount = form.get("questionCount") as string;
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
     const model = form.get("model") as string;
-    const prompts = form.get("prompts") as string;
-
-    //const llmHandler: LLMHandler = GeminiHandler.getInstance(process.env.GEMINI_API_KEY as string);
-    //const llmHandler: LLMHandler = MistralHandler.getInstance(process.env.MISTRAL_API_KEY as string);
+    const promptIteration = form.get("prompts") as string;
+    const courseIdStr = form.get("courseId") as string;
+    const generationId = form.get("generationId") as string
 
     try {
-
-        // Ensure only a logged in user can call this route
-        const { userId, error } = await verifyAuth(request);
-
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         if (!title) {
             return NextResponse.json({ error: "Evaluation doit avoir un titre" }, { status: 400 });
         }
 
-        if ((!contentFiles || contentFiles.length === 0) && suggestedFileIds.length === 0) {
+        if ((!localFiles || localFiles.length === 0) && suggestedFileIds.length === 0) {
             return NextResponse.json({ error: "Au moins un fichier doit être fourni" }, { status: 400 });
         }
 
@@ -50,22 +61,33 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Modèle LLM doit être fourni" }, { status: 400 });
         }
 
-        if (!prompts) {
+        if (!promptIteration) {
             console.log("Prompts not provided");
             return NextResponse.json({ error: "Version des prompts doit être fourni" }, { status: 400 });
+        }
+
+        const courseId = Number(courseIdStr);
+
+        if (!courseId || isNaN(courseId)) {
+            return NextResponse.json({ error: "Course ID invalide" }, { status: 400 });
         }
 
         // Parse local file metadata
         let parsedMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
         try {
-            parsedMeta = JSON.parse(contentFilesMeta);
+            parsedMeta = JSON.parse(localFilesMeta);
         } catch (e) {
-            return NextResponse.json({ error: 'Invalid contentFilesMeta JSON' }, { status: 400 });
+            return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
         }
 
-        const generationHandler = await getGenerationHandler(model, prompts);
+        // Parse pool file metadata
+        let parsedPoolMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
+        try {
+            parsedPoolMeta = JSON.parse(poolFilesMeta);
+        } catch (e) {
+            return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
+        }
 
-        // TODO: Handle pool files context types
         let poolFiles: { fileName: string, filePath: string, mimeType: string }[] = [];
 
         if (suggestedFileIds.length > 0) {
@@ -80,22 +102,29 @@ export async function POST(request: NextRequest) {
 
           poolFiles = results;
         }
-
-        //const allFiles: (LocalFile | { fileName: string, filePath: string, mimeType: string })[] = [...contentFiles, ...poolFiles];
+        
         const allFiles: FileWithContext[] = [
-            ...contentFiles.map(f => ({ 
+            ...localFiles.map(f => ({ 
                 file: f, 
                 contextType: parsedMeta.find(m => m.name === f.name)?.contextType || 'course' 
             } as FileWithContext)), 
             ...poolFiles.map(f => ({ 
                 file: { fileName: f.fileName, filePath: f.filePath, mimeType: f.mimeType }, 
-                contextType: 'course' 
+                contextType: parsedPoolMeta.find(m => m.name === f.fileName)?.contextType || 'course' 
             } as FileWithContext))
         ];
 
-        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, genModel: model });
+        const generationHandler = await getGenerationHandler(model, promptIteration);
+        const generationResult = await generationHandler.generateEvaluation({ 
+            files: allFiles, 
+            questionTypes, 
+            globalDifficulty, 
+            questionCount, 
+            genModel: model, 
+            generationId 
+        });
      
-
+        setProgress(generationId, 'done');
         // Ensure quizText is valid JSON before saving
         let quizJSON;
         try {
@@ -104,19 +133,36 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "L'évaluation généré n'est pas du JSON valide" }, { status: 500 });
         }
 
-        const createdEval = await prisma.quiz.create({
+        // Create the evaluation without a current version
+        const evaluation = await prisma.evaluation.create({
             data: {
-                title: title,
-                content: quizJSON,
-                metadata: generationResult.metadata,
+                title,
                 genModel: model,
-                author: {connect: {id: userId as number}},
+                metadata: generationResult.metadata,
+                course: { connect: { id: courseId as number } },
+            },
+        });
+        
+        // Create the version and connect it to the evaluation
+        const version = await prisma.evaluationVersion.create({
+            data: {
+                content: quizJSON,
+                versionInfo: { versionNumber: 1, info: "Version initiale" },
+                evaluation: { connect: { id: evaluation.id } },
+            },
+        });
+        
+        // Update the evaluation to set the currentVersion
+        await prisma.evaluation.update({
+            where: { id: evaluation.id },
+            data: {
+                currentVersion: { connect: { id: version.id } }
             },
         });
 
-        return NextResponse.json(createdEval.id);
+        return NextResponse.json(evaluation.id);
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Failed to login" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

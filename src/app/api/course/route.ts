@@ -1,40 +1,26 @@
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/verifyAuth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     
     try {
-        const { error } = await verifyAuth(request);
-        
-        if (error) {
-            return NextResponse.json({ error }, { status: 401 });
-        }
-
         const courses = await prisma.course.findMany({});
-
         return NextResponse.json(courses, { status: 200 });
          
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Failed to fetch courses" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur dans la récupération des cours" }, { status: 500 });
     } finally {
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
-      const { userId, error } = await verifyAuth(request);
-  
-      if (error) {
-        return NextResponse.json({ error }, { status: 401 });
-      }
-  
       const body = await request.json();
       const { name } = body;
   
       if (!name || typeof name !== 'string' || name.trim() === '') {
-        return NextResponse.json({ error: 'Invalid course name' }, { status: 400 });
+        return NextResponse.json({ error: 'Nom de cours invalide' }, { status: 400 });
       }
   
       // Check if course with this name already exists to avoid duplicates
@@ -45,7 +31,7 @@ export async function POST(request: NextRequest) {
       });
   
       if (existing) {
-        return NextResponse.json({ error: 'Course with this name already exists' }, { status: 409 });
+        return NextResponse.json({ error: 'Un cours avec le même nom exist déjà' }, { status: 409 });
       }
   
       const newCourse = await prisma.course.create({
@@ -56,8 +42,7 @@ export async function POST(request: NextRequest) {
   
       return NextResponse.json(newCourse, { status: 201 });
     } catch (error) {
-      console.error('Error creating course:', error);
-      return NextResponse.json({ error: 'Failed to create course' }, { status: 500 });
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
     }
   }
   

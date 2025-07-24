@@ -1,4 +1,4 @@
-import BaseFileCard from '@/components/BaseFileCard';
+import BaseFileCard from '@/components/files/BaseFileCard';
 import { useState } from 'react';
 import { PoolFile } from '@/types';
 

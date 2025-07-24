@@ -24,14 +24,16 @@ type RegenerationHandlerMap = {
   };
 };
 
-
 const modelAPIMap: Record<string, API> = {
   'models/gemini-2.5-flash': 'gemini',
   'codestral-2501': 'mistral',
 }
+
 const generationHandlers: GenerationHandlerMap = {
   gemini: {
     v1: () => import('@/lib/llm/gemini/handlers/generation/v1/handler'),
+    v2: () => import('@/lib/llm/gemini/handlers/generation/v2/handler'),
+    v3: () => import('@/lib/llm/gemini/handlers/generation/v3/handler'),
   },
   mistral: {
     v1: () => import('@/lib/llm/mistral/handlers/generation/v1/handler'),

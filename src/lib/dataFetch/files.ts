@@ -6,7 +6,7 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 export async function fetchFiles(): Promise<PoolFile[]> {
     const cookieStore = await cookies();
 
-    const response = await fetch(`${baseUrl}/api/user/files`, {
+    const response = await fetch(`${baseUrl}/api/file`, {
         headers: {
             Cookie: cookieStore.toString(),
         },

@@ -1,11 +1,5 @@
 const contextSystemPromptTemplate = () => `
-Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte claire, structurée et utile à la conception d'une évaluation.
-`;
-
-const contextUserPromptTemplate = (combinedFileContent: string) =>`
-Analysez attentivement le contenu des fichiers fournis.
-
-${combinedFileContent}
+Vous êtes un assistant pédagogique expert. Votre objectif est d'analyser du contenu de cours brut pour en extraire un contexte clair, structuré et utile à la conception d'une évaluation.
 
 Instructions :
 - Identifiez les principaux thèmes et concepts abordés dans les fichiers, qu'ils soient théoriques ou pratiques.
@@ -15,6 +9,12 @@ Instructions :
 - Organisez le contenu de manière lisible, avec des titres, sous-titres, ou listes si nécessaire.
 
 Objectif : produire un contexte qui permettrait à une IA de recevoir le contexte des fichiers et de concevoir des questions pertinentes à partir de ce contenu.
+`;
+
+const contextUserPromptTemplate = (combinedFileContent: string) =>`
+Analysez attentivement le contenu des fichiers fournis.
+
+${combinedFileContent}
 `;
 
 
@@ -35,11 +35,11 @@ Intructions :
 {
   "plan": [
     {
-      "number": "Q1",
-      "concept": "nom du concept choisi",
+      "number": "Le numéro de la question",
+      "concept": "Le nom du concept choisi",
       "questionType": "${questionTypes.join("|")}",
       "difficulty": "**${globalDifficulty}**",
-      "objective": "objectif de la question (ex: tester capacité à implémenter une fonction récursive)"
+      "objective": "L'objectif de la question (ex: tester capacité à implémenter une fonction récursive)"
     },
     ...
   ]
@@ -60,13 +60,13 @@ ${combinedInspirationContent}
 `;
 
 const evalSystemPromptTemplate = (combinedInspirationContent: string) => `
-Vous êtes un générateur d'évaluation intelligent pour des étudiants en ingénierie. À partir d'un plan d'évaluation donné fourni en JSON${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, rédigez une évaluation .
+Vous êtes un générateur d'évaluation intelligent pour des étudiants en ingénierie. À partir d'un plan d'évaluation donné fourni en JSON${combinedInspirationContent !== "" ? " et en vous inspirant d'exemples d'évaluations fournies" : ""}, rédigez une évaluation.
 
 Instructions :
 - Rédigez la question de façon claire, précise et cohérente.
 - Les questions doivent satisfaire l'objectif de la question et respecter le type de question indiqué.
 - La difficulté des questions doit être adaptée au niveau indiqué dans le plan :
-  - Si la question est "très difficile", elle doit nécessiter une réflexion approfondie.
+  - Si la question est "difficile" ou "très difficile", elle doit nécessiter une réflexion approfondie.
 - Les questions d'écriture de code doivent être **concrets, non ambiguës et fournir des exemples de résultats ou de comportements attendus dans la consigne**.
 - Évitez les questions triviales ou trop simples.
 - Retournez uniquement un objet JSON strictement valide contenant les données de l'évaluation.
@@ -74,33 +74,11 @@ Instructions :
 {
   "content": [
     {
-      "number": "Q1",
-      "questionText": "...",
-      "questionType": "open",
-      "options": [],
-      "correctAnswer": "...",
-      "explanation": "..."
-    },
-    {
-      "number": "Q2",
-      "questionText": "...",
-      "questionType": "codeComprehension",
-      "options": [],
-      "correctAnswer": "...",
-      "explanation": "..."
-    },
-    {
-      "number": "Q3",
-      "questionText": "...",
-      "questionType": "mcq",
-      "options": [
-        "...",
-        "...",
-        "...",
-        "..."
-      ],
-      "correctAnswer": "...",
-      "explanation": "..."
+      "number": "Le numéro de la question",
+      "questionText": "L'énoncé de la question",
+      "questionType": "Le type de question",
+      "options": [] "Liste des options si le type de question est mcq",
+      "correctAnswer": "La réponse correcte de la question",
     }
   ]
 }
@@ -119,9 +97,10 @@ Contexte complet à prendre en compte (ne pas ignorer) :
 ${contextText}
 
 ${combinedInspirationContent !== "" ? `
-Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation :
-${combinedInspirationContent}
-` : ''}
+  - Prenez également en compte les fichiers d'inspiration fournis. Analysez leur structure, leur style de questions, la formulation des consignes et le format des réponses pour orienter la forme de votre propre évaluation.
+  - **N'utilisez pas directement les exercices ou leurs énoncés présents dans les fichiers d'inspiration.** Les questions générées doivent être **originales**, même si elles s'inspirent de styles.
+  ${combinedInspirationContent}
+  ` : ''}
 `;
 
 export const prompts = {

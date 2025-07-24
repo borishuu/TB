@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { TrashIcon, PencilIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ParamValue } from 'next/dist/server/request/params';
@@ -17,7 +18,7 @@ interface Question {
     explanation?: string;
 }
 
-export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Question, quizId: ParamValue }) {
+export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { baseQuestion: Question, quizId: ParamValue, onNewVersion?: (version: any) => void }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [regenState, setRegentState] = useState(false);
@@ -35,9 +36,19 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
         setIsEditing(true);
     };
 
+    const promptPresets = [
+        { label: "Plus difficile", value: "Rendre l'exercice plus difficile" },
+        { label: "Plus facile", value: "Rendre l'exercice plus facile" },
+        { label: "Formattage", value: "Reformuler la question et la réponse avec un formatage Markdown clair et structuré" },
+        { label: "Pièges", value: "Ajouter des pièges dans l'exercice" },
+        { label: "Clarifier", value: "Clarifier l'énoncé de la question" },
+        { label: "Technique", value: "Ajouter des détails techniques" },
+        { label: "Explication", value: "Ajouter une explication détaillée" },
+    ];
+
     const handleSave = async () => {
         try {
-            const response = await fetch(`/api/eval/${quizId}`, {
+            const response = await fetch(`/api/eval/${quizId}/question`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -47,8 +58,11 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
             if (!response.ok) {
                 throw new Error('Failed to update question');
             }
+            const data = await response.json();
+            const newVersion = data.newVersion;
             setQuestion(editQuestion);
             setIsEditing(false);
+            if (onNewVersion) onNewVersion(newVersion);
         } catch (error) {
             console.error("Error saving question:", error);
         }
@@ -75,59 +89,78 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
             if (!response.ok) {
                 throw new Error('Failed to regenerate question');
             }
-            const newQuestion: Question = await response.json();
-            setQuestion(newQuestion);
+            const newVersion = await response.json();
+            //setQuestion(newQuestion);
             setIsRegenerating(false);
+            if (onNewVersion) onNewVersion(newVersion.newVersion);
         } catch (error) {
             console.error("Error regenerating question:", error);
             setIsRegenerating(false);
         }
     };
 
-    const renderers = {
-        code({ inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '');            
-            //const codeString = String(children).replace(/\n$/, '');
-            const codeString = String(children);
-
-    
-            if (!inline && match) {
-                return (
-                    <SyntaxHighlighter
-                        style={materialLight}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                            fontSize: '0.85em',
-                        }}
-                        {...props}
-                    >
-                        {codeString}
-                    </SyntaxHighlighter>
-                );
-            }
-    
-            // Inline or fallback
+    const renderers: Components = {
+        code({ inline, className, children, ...props }: { 
+            inline?: boolean; 
+            className?: string; 
+            children?: React.ReactNode 
+          }) {
+          const match = /language-(\w+)/.exec(className || '');
+          const codeString = String(children).replace(/\n$/, '');
+      
+          if (!inline && match) {
             return (
-                <SyntaxHighlighter
-                    style={materialLight}
-                    language={match?.[1] || 'javascript'} 
-                    PreTag="span"
-                    customStyle={{
-                        display: 'inline',
-                        padding: '0.15em 0.3em',
-                        backgroundColor: '#f5f5f5',
-                        borderRadius: '4px',
-                        fontSize: '0.95em',
-                    }}
-                    {...props}
-                >
-                    {codeString}
-                </SyntaxHighlighter>
+              <SyntaxHighlighter
+                style={materialLight}
+                language={match[1]}
+                PreTag="div"
+                customStyle={{ fontSize: '0.85em' }}
+                {...props}
+              >
+                {codeString}
+              </SyntaxHighlighter>
+            );
+          }
+      
+          return (
+            <SyntaxHighlighter
+                style={materialLight}
+                language={match?.[1] || 'javascript'} 
+                PreTag="span"
+                customStyle={{
+                    display: 'inline',
+                    padding: '0.15em 0.3em',
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '4px',
+                    fontSize: '0.95em',
+                }}
+                {...props}
+            >
+                {codeString}
+            </SyntaxHighlighter>
             );
         },
-    };
-    
+      
+        p({ children, ...props }) {
+          return <p className="mb-1 leading-tight" {...props}>{children}</p>;
+        },
+      
+        ol({ children, ...props }) {
+          return <ol className="list-decimal pl-6 mb-1 leading-tight" {...props}>{children}</ol>;
+        },
+      
+        ul({ children, ...props }) {
+          return <ul className="list-disc pl-6 mb-1 leading-tight" {...props}>{children}</ul>;
+        },
+      
+        li({ children, ...props }) {
+          return <li className="mb-0.5" {...props}>{children}</li>;
+        },
+      
+        strong({ children, ...props }) {
+          return <strong className="font-semibold" {...props}>{children}</strong>;
+        }
+      };
 
     return (
         <div className="bg-white shadow-lg rounded-lg p-4 pb-10 border border-gray-200 hover:shadow-xl transition relative">
@@ -139,7 +172,7 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                         className="border p-1 rounded w-full min-h-[240px]"
                     />
                 ) : (
-                    <div className="break-words">
+                    <div className="whitespace-pre-wrap break-words overflow-x-auto max-w-full">
                         <div className="font-semibold">
                             {`${question.number}.`}
                         </div>
@@ -208,23 +241,37 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
             )}
 
             {regenState && (
-                <div className="mt-2">
-                    <input 
-                        type="text" 
-                        placeholder="Indiquez comment améliorer la question" 
-                        value={regenPrompt} 
-                        onChange={(e) => setRegenPrompt(e.target.value)} 
-                        className="border p-1 rounded w-full"
-                    />
-                    <button 
-                        onClick={handleRegenerate} 
-                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-2 mt-2"
-                        disabled={isRegenerating}
+            <div className="mt-2">
+                <div className="mb-2 flex flex-wrap gap-2">
+                {promptPresets.map(({ label, value }) => (
+                    <button
+                    key={label}
+                    type="button"
+                    className="text-sm bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded"
+                    onClick={() => setRegenPrompt(value)}
                     >
-                        <ArrowPathIcon className="w-5 h-5" /> 
-                        <span>{isRegenerating ? 'Regénération...' : 'Regénérer'}</span>
+                    {label}
                     </button>
+                ))}
                 </div>
+
+                <input 
+                type="text" 
+                placeholder="Indiquez comment améliorer la question" 
+                value={regenPrompt} 
+                onChange={(e) => setRegenPrompt(e.target.value)} 
+                className="border p-1 rounded w-full"
+                />
+
+                <button 
+                onClick={handleRegenerate} 
+                className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-2 mt-2"
+                disabled={isRegenerating}
+                >
+                <ArrowPathIcon className="w-5 h-5" /> 
+                <span>{isRegenerating ? 'Régénération...' : 'Régénérer'}</span>
+                </button>
+            </div>
             )}
 
             <div className="absolute bottom-2 right-2 flex space-x-2">
@@ -245,7 +292,7 @@ export default function QuestionCard({ baseQuestion, quizId }: { baseQuestion: Q
                     onClick={() => setRegentState(!regenState)}
                     className="text-black px-3 py-1 rounded flex items-center space-x-2"
                 >
-                    <ArrowPathIcon className="w-5 h-5" /> <span>Demander regénération</span>
+                    <ArrowPathIcon className="w-5 h-5" /> <span>Demander régénération</span>
                 </button>
             </div>
         </div>

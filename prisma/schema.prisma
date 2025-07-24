@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -13,29 +14,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int     @id @default(autoincrement())
-  username  String
-  password  String
-  email     String  @unique
-  quizes    Quiz[]
+model Evaluation {
+  id                Int                 @id @default(autoincrement())
+  title             String
+  metadata          Json?
+  genModel          String?
+  courseId          Int
+  course            Course              @relation(fields: [courseId], references: [id])
+  currentVersionId  Int?                @unique
+  currentVersion    EvaluationVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions          EvaluationVersion[] @relation("EvaluationVersions")
 }
 
-model Quiz {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   Json?
-  createdAt DateTime @default(now())
-  metadata   Json?
-  genModel  String?
-  authorId  Int
-  author    User   @relation(fields: [authorId], references: [id])
+model EvaluationVersion {
+  id            Int         @id @default(autoincrement())
+  content       Json?
+  versionInfo   Json?
+  createdAt     DateTime    @default(now())
+  evaluationId  Int
+  evaluation    Evaluation  @relation("EvaluationVersions", fields: [evaluationId], references: [id], onDelete: Cascade)
+  currentFor    Evaluation? @relation("CurrentVersion")
 }
 
 model Course {
   id          Int     @id @default(autoincrement())
   courseName  String
   files       File[]
+  evaluations Evaluation[]
 }
 
 model File {
@@ -45,7 +50,7 @@ model File {
   mimeType    String
   fileSize    Float
   filePath    String
-  embedding   Unsupported("vector(3072)")
+  textContent String
   courseId    Int
   course      Course    @relation(fields: [courseId], references: [id])
 }

@@ -6,6 +6,7 @@ import * as responseSchemas from '@/lib/llm/gemini/ResponseSchemas';
 import { prompts } from './prompts';
 import fs from 'fs';
 import path from 'path';
+import { setProgress } from '@/lib/progressStore';
 
 class GeminiGenerateHandler implements LLMGenerationHandler {
   private static instance: GeminiGenerateHandler | null = null;
@@ -59,7 +60,25 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
     return results;
   } 
 
-  private async generateEval(options: GenerateOptions, uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[], evalPromptTemplate: any): Promise<string> {
+
+  private async generateContext(options: GenerateOptions, uploadedCourseFiles: { uri: string; mimeType: string, contextType: ContextType }[], contextPromptTemplate: any): Promise<string> {
+    const model = this.genAI.getGenerativeModel({ model: options.genModel });
+
+
+    const fileData = uploadedCourseFiles.map((r) => ({ fileData: { 
+      fileUri: r.uri, 
+      mimeType: r.mimeType },
+    }))
+
+    const contextResult = await model.generateContent([
+      contextPromptTemplate(),
+      ...fileData,
+    ]);
+
+    return contextResult.response.text();
+  }
+
+  private async generateEval(context: string, options: GenerateOptions, uploadedInspirationFiles: { uri: string; mimeType: string, contextType: ContextType }[], evalPromptTemplate: any): Promise<string> {
     const model = this.genAI.getGenerativeModel({
       model: options.genModel,
       generationConfig: {
@@ -68,32 +87,48 @@ class GeminiGenerateHandler implements LLMGenerationHandler {
       },
     });
 
-    const fileData = uploadedCourseFiles.map((r) => ({ fileData: { 
-      fileUri: r.uri, 
-      mimeType: r.mimeType },
-    }))
-        
-    const result = await model.generateContent([ 
-      evalPromptTemplate(options.globalDifficulty, options.questionTypes),
-      ...fileData 
-    ]);
-    return result.response.text();
+    if (uploadedInspirationFiles.length > 0) {      
+      const fileData = uploadedInspirationFiles.map((r) => ({ fileData: { 
+        fileUri: r.uri, 
+        mimeType: r.mimeType },
+      }))          
+      const result = await model.generateContent([ 
+        evalPromptTemplate(context, options.globalDifficulty, options.questionCount, options.questionTypes, true),
+        ...fileData 
+      ]);
+      return result.response.text();
 
+    } else {            
+      const result = await model.generateContent([ evalPromptTemplate(context, options.globalDifficulty, options.questionCount, options.questionTypes, false) ]);
+      return result.response.text();
+    }
   }
 
   async generateEvaluation(options: GenerateOptions): Promise<GenerationResult> {
     const uploadedFiles = await this.uploadFiles(options.files);
+    
+    if (uploadedFiles.some(f => f.contextType === 'evalInspiration')) {
+      console.log("Inspiration files detected, using with context prompt.");
+    }
 
+    const contextPromptTemplate = prompts.contextPromptTemplate;
     const evalPromptTemplate = prompts.evalPromptTemplate;
 
+    setProgress(options.generationId, 'context');
+    const contextStart = performance.now();
+    const context = await this.generateContext(options, uploadedFiles.filter(f => f.contextType === 'course'), contextPromptTemplate);
+    const contextEnd = performance.now();
+
+    setProgress(options.generationId, 'evaluation');
     const evalStart = performance.now();
-    const evaluation = await this.generateEval(options, uploadedFiles.filter(f => f.contextType === 'course'), evalPromptTemplate);
+    const evaluation = await this.generateEval(context, options, uploadedFiles.filter(f => f.contextType === 'evalInspiration'), evalPromptTemplate);
     const evalEnd = performance.now();
 
     return {
       evaluation,
       metadata: {
-        generationPromptVersion: 'v1',
+        generationPromptVersion: 'v3',
+        contextTimeMs: Math.round(contextEnd - contextStart),
         evalTimeMs: Math.round(evalEnd - evalStart),
         model: options.genModel,
       },
