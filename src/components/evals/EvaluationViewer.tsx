@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect  } from 'react';
-import QuestionCard from '@/components/QuestionCard';
+import QuestionCard from '@/components/evals/QuestionCard';
 import { Eval } from '@/types';
 
 interface EvaluationViewerProps {

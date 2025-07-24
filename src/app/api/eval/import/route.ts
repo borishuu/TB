@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
         const courseId = Number(courseIdStr);
         if (!courseId || isNaN(courseId)) {
-            return NextResponse.json({ error: "Course ID invalide" }, { status: 400 });
+            return NextResponse.json({ error: "Cours ID invalide" }, { status: 400 });
         }
 
         // Create the evaluation without a current version
@@ -51,12 +51,12 @@ export async function POST(request: NextRequest) {
             where: { id: evaluation.id },
             data: {
                 currentVersion: { connect: { id: version.id } }
-            },
+            }
         });
 
         return NextResponse.json(evaluation.id);
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

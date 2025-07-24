@@ -2,21 +2,25 @@
 
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import FileWithCheckbox from '@/components/FileWithCheckbox';
 import CourseDropdown from '@/components/CourseDropdown';
+import FileDropZone from '@/components/files/FileDropZone';
 import { LocalFile, PoolFile, Course } from '@/types';
 
-export default function CreateEvalForm({ courses }: { courses: Course[] }) {
+interface CreateEvalFormProps {
+  courses: Course[];
+  onClose: () => void;
+  onSuccess: (evalId: number) => void;
+}
+
+export default function CreateEvalForm({ courses, onClose, onSuccess }: CreateEvalFormProps) {
   const [title, setTitle] = useState('');
   const [topics, setTopics] = useState<string[]>([]);
   const [topicInput, setTopicInput] = useState<string>('');
   const [difficulty, setDifficulty] = useState('medium');
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
+  const [questionCount, setQuestionCount] = useState<number>(10);
   const [files, setFiles] = useState<LocalFile[]>([]);
   const [suggestedFiles, setSuggestedFiles] = useState<PoolFile[]>([]);
-  const [modelKey, setModelKey] = useState('gemini 2.5 flash');
-  const [prompts, setPrompts] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [localDragActive, setLocalDragActive] = useState(false);
@@ -25,11 +29,13 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
   const [newCourseName, setNewCourseName] = useState('');
   const [allPoolFiles, setAllPoolFiles] = useState<PoolFile[]>([]);
   const [showPoolModal, setShowPoolModal] = useState(false);
+  const [phase, setPhase] = useState<string | null>(null);
   const localInputRef = useRef<HTMLInputElement>(null);
 
-  const router = useRouter();
+  /*const [modelKey, setModelKey] = useState('gemini 2.5 flash');
+  const [prompts, setPrompts] = useState('');*/  
 
-  const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
+  /*const models: Record<string, { model: string; prompts: { value: string; label: string }[] }>  = {
     'gemini 2.5 flash': {
       model: 'models/gemini-2.5-flash',
       prompts: [
@@ -49,23 +55,46 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
         { value: 'v6', label: 'v6 - extraction -> plan -> éval -> corrections' },
       ],
     },
-  };
+  };*/
+  
+  const questionTypeOptions = [
+    'Écriture de code',
+    'Compréhension de code',
+    'QCM',
+    'Question ouverte',
+  ];
 
-  const availablePrompts = models[modelKey]?.prompts || [];
-  const model = models[modelKey]?.model || '';
 
+  //const availablePrompts = models[modelKey]?.prompts || [];
+  //const model = models[modelKey]?.model || '';
+  
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      const res = await fetch('/api/eval/generation/start', { method: 'POST' });
+      const { generationId } = await res.json();
+
+      const sse = new EventSource(`/api/eval/generation/progress?id=${generationId}`);
+      sse.onmessage = (event) => {
+        const { phase } = JSON.parse(event.data);
+        setPhase(phase);
+        console.log("Phase:", phase);
+      };
+
+
       const formData = new FormData();
       formData.append('title', title);
       formData.append('difficulty', difficulty);
-      formData.append('model', model);   
-      formData.append('prompts', prompts);
+      formData.append('questionCount', String(questionCount));
+      //formData.append('model', model);
+      formData.append('model', 'models/gemini-2.5-flash');      
+      //formData.append('prompts', prompts);
+      formData.append('prompts', 'v3');
       formData.append('courseId', String(selectedCourse || ''));
+      formData.append('generationId', generationId)
       topics.forEach((topic) => formData.append('topics', topic));
       questionTypes.forEach((type) => formData.append('questionTypes', type));
       suggestedFiles.forEach((file) => formData.append('suggestedFileIds', String(file.id)));
@@ -94,8 +123,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       }
 
       const data = await response.json();
-      console.log(data);
-      router.push(`/eval/${data}`);
+      onSuccess(data);
     } catch (error: any) {
       setError(error.message);
       setLoading(false);
@@ -184,13 +212,6 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
     );
   };
 
-  const questionTypeOptions = [
-    'Écriture de code',
-    'Compréhension de code',
-    'QCM',
-    'Question ouverte',
-  ];
-
   const addTopic = () => {
     const newTopic = topicInput.trim();
     if (newTopic && !topics.includes(newTopic)) {
@@ -212,7 +233,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
   const handleBrowsePoolFiles = async () => {
     try {
-      const response = await fetch('/api/user/files');
+      const response = await fetch('/api/file');
       if (!response.ok) throw new Error('Erreur lors du chargement des fichiers');
       const data = await response.json();
       setAllPoolFiles(data);
@@ -224,7 +245,13 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
 
   return (
     <div className="relative flex items-center justify-center">
-      <div className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`bg-white p-8 rounded-lg shadow-md w-full max-w-3xl max-h-[90vh] overflow-y-auto transition-opacity duration-300 ${loading ? 'pointer-events-none' : ''}`}>
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
         <h2 className="text-2xl font-bold text-center mb-6">Générer une évaluation</h2>
 
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
@@ -242,24 +269,42 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
             />
           </div>
 
-          {/* Difficulty */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Difficulté globale</label>
-            <select
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-            >
-              <option value="very_easy">Très facile</option>
-              <option value="easy">Facile</option>
-              <option value="medium">Moyen</option>
-              <option value="hard">Difficile</option>
-              <option value="very_hard">Très difficile</option>
-            </select>
+          <div className="flex gap-4">
+            {/* Difficulty */}
+            <div className="w-1/2">
+              <label className="block text-sm font-medium text-gray-700">Difficulté globale</label>
+              <select
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+              >
+                <option value="very_easy">Très facile</option>
+                <option value="easy">Facile</option>
+                <option value="medium">Moyen</option>
+                <option value="hard">Difficile</option>
+                <option value="very_hard">Très difficile</option>
+              </select>
+            </div>
+
+            {/* Question Count */}
+            <div className="w-1/2">
+              <label className="block text-sm font-medium text-gray-700">Nombre de questions</label>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={questionCount}
+                onChange={(e) => setQuestionCount(Number(e.target.value))}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nombre de questions à générer"
+              />
+            </div>
           </div>
 
+
+
           {/* LLM Model */}
-          <div>
+          {/*<div>
             <label className="block text-sm font-medium text-gray-700">Modèle LLM</label>
             <select
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -276,10 +321,10 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
               )}
 
             </select>
-          </div>
+          </div>*/}
 
           {/* Prompting */}
-          <div>
+          {/*<div>
             <label className="block text-sm font-medium text-gray-700">Version des prompts</label>
             <select
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -294,10 +339,10 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                 </option>
               ))}
             </select>
-          </div>
+          </div>*/}
 
           {/* Question Types */}
-          <div>
+          {<div>
             <label className="block text-sm font-medium text-gray-700">Types de questions</label>
             <div className="flex flex-wrap gap-4 mt-2">
               {questionTypeOptions.map((type) => (
@@ -312,7 +357,7 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
                 </label>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* Course */}
           <div className="mb-4">
@@ -368,86 +413,51 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
           </div>
 
           {/* Suggested Files */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers depuis mon pool</label>
-            <button
-              type="button"
-              onClick={handleFindCorrespondingFiles}
-              className="button mb-4"
-            >
-              Chercher fichiers correspondants
-            </button>            
-            <div className="border-2 border-dashed rounded-lg p-4 text-center border-gray-300">
-              <p className="text-gray-500">
-                Recherche automatique depuis les sujets donnés, ou{' '}
-                <span className="text-blue-600 underline cursor-pointer" onClick={handleBrowsePoolFiles}>parcourir</span>
-              </p>
-              {suggestedFiles.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {suggestedFiles.map((file, index) => (
-                    <div key={file.id} className="relative">
-                      <FileWithCheckbox
-                        file={file}
-                        onDelete={() => removeSuggestedFile(file.id)}
-                        onCheckboxChange={() => changePoolFileContextType(index)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <FileDropZone
+            title="Fichiers depuis mon pool"
+            description="Recherche automatique depuis les sujets donnés, ou"
+            files={suggestedFiles}
+            variant='checkbox'
+            onDelete={(index) => removeSuggestedFile(suggestedFiles[index].id)}
+            onCheckboxChange={changePoolFileContextType}
+            showFindButton
+            onFindClick={handleFindCorrespondingFiles}
+            onBrowseClick={handleBrowsePoolFiles}
+          />
+
 
           {/* Local Files */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fichiers locaux</label>
-            <div
-              className={`border-2 border-dashed rounded-lg p-4 text-center ${
-                localDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-              } transition-all`}
-              onDragOver={handleLocalDragOver}
-              onDragLeave={handleLocalDragLeave}
-              onDrop={handleLocalDrop}
-            >
-              <input
-                ref={localInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleLocalFileChange}
-              />
-              <p className="text-gray-500">
-                Glissez-déposez des fichiers ici, ou{' '}
-                <span
-                  className="text-blue-600 underline cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    localInputRef.current?.click();
-                  }}
-                >
-                  parcourir
-                </span>
-              </p>
-              {files.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {files.map((file, index) => (
-                    <div key={index} className="relative">
-                      <FileWithCheckbox
-                        file={{ id: index, fileName: file.file.name, course: {}, createdAt: '', contextType: 'course' }}
-                        onDelete={() => removeFile(index)}
-                        onCheckboxChange={() => changeLocalFileContextType(index)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <input
+            type="file"
+            multiple
+            ref={localInputRef}
+            onChange={handleLocalFileChange}
+            className="hidden"
+          />
+          <FileDropZone
+            title="Fichiers locaux"
+            description="Glissez-déposez des fichiers ici, ou"
+            files={files.map((file, index) => ({
+              id: index,
+              fileName: file.file.name,
+              course: {},
+              createdAt: '',
+              contextType: 'course',
+            }))}
+            variant='checkbox'
+            onDelete={removeFile}
+            onCheckboxChange={changeLocalFileContextType}
+            onDrop={handleLocalDrop}
+            onDragOver={handleLocalDragOver}
+            onDragLeave={handleLocalDragLeave}
+            onBrowseClick={() => localInputRef.current?.click()}
+            borderActive={localDragActive}
+          />
 
           <button
             type="submit"
             className="w-full button"
-            disabled={loading || !prompts || !title || questionTypes.length === 0 || (files.length === 0 && suggestedFiles.length === 0)}
+            disabled={loading || !selectedCourse || !title || questionTypes.length === 0 || (files.length === 0 && suggestedFiles.length === 0)}
           >
             {loading ? 'Génération...' : 'Générer'}
           </button>
@@ -455,10 +465,19 @@ export default function CreateEvalForm({ courses }: { courses: Course[] }) {
       </div>
 
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="bg-gray-100 p-6 rounded-lg shadow-lg flex flex-col items-center gap-2">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-700 text-xl font-bold text-center">
+              {phase === 'context' && 'Extraction du contexte...'}
+              {phase === 'evaluation' && 'Génération de l\'évaluation...'}
+              {!phase && 'Préparation...'}
+            </p>
+          </div>
         </div>
       )}
+
+
       {showPoolModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-2xl p-6 rounded-lg shadow-lg overflow-y-auto max-h-[80vh]">

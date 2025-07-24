@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { TrashIcon, PencilIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import ReactMarkdown from 'react-markdown';
-import { ComponentProps } from 'react';
 import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { materialLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -37,9 +36,19 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
         setIsEditing(true);
     };
 
+    const promptPresets = [
+        { label: "Plus difficile", value: "Rendre l'exercice plus difficile" },
+        { label: "Plus facile", value: "Rendre l'exercice plus facile" },
+        { label: "Formattage", value: "Reformuler la question et la réponse avec un formatage Markdown clair et structuré" },
+        { label: "Pièges", value: "Ajouter des pièges dans l'exercice" },
+        { label: "Clarifier", value: "Clarifier l'énoncé de la question" },
+        { label: "Technique", value: "Ajouter des détails techniques" },
+        { label: "Explication", value: "Ajouter une explication détaillée" },
+    ];
+
     const handleSave = async () => {
         try {
-            const response = await fetch(`/api/eval/${quizId}`, {
+            const response = await fetch(`/api/eval/${quizId}/question`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -232,23 +241,37 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
             )}
 
             {regenState && (
-                <div className="mt-2">
-                    <input 
-                        type="text" 
-                        placeholder="Indiquez comment améliorer la question" 
-                        value={regenPrompt} 
-                        onChange={(e) => setRegenPrompt(e.target.value)} 
-                        className="border p-1 rounded w-full"
-                    />
-                    <button 
-                        onClick={handleRegenerate} 
-                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-2 mt-2"
-                        disabled={isRegenerating}
+            <div className="mt-2">
+                <div className="mb-2 flex flex-wrap gap-2">
+                {promptPresets.map(({ label, value }) => (
+                    <button
+                    key={label}
+                    type="button"
+                    className="text-sm bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded"
+                    onClick={() => setRegenPrompt(value)}
                     >
-                        <ArrowPathIcon className="w-5 h-5" /> 
-                        <span>{isRegenerating ? 'Regénération...' : 'Regénérer'}</span>
+                    {label}
                     </button>
+                ))}
                 </div>
+
+                <input 
+                type="text" 
+                placeholder="Indiquez comment améliorer la question" 
+                value={regenPrompt} 
+                onChange={(e) => setRegenPrompt(e.target.value)} 
+                className="border p-1 rounded w-full"
+                />
+
+                <button 
+                onClick={handleRegenerate} 
+                className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-2 mt-2"
+                disabled={isRegenerating}
+                >
+                <ArrowPathIcon className="w-5 h-5" /> 
+                <span>{isRegenerating ? 'Régénération...' : 'Régénérer'}</span>
+                </button>
+            </div>
             )}
 
             <div className="absolute bottom-2 right-2 flex space-x-2">
@@ -269,7 +292,7 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
                     onClick={() => setRegentState(!regenState)}
                     className="text-black px-3 py-1 rounded flex items-center space-x-2"
                 >
-                    <ArrowPathIcon className="w-5 h-5" /> <span>Demander regénération</span>
+                    <ArrowPathIcon className="w-5 h-5" /> <span>Demander régénération</span>
                 </button>
             </div>
         </div>

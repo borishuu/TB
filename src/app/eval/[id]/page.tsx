@@ -1,5 +1,5 @@
 import { fetchEval } from '@/lib/dataFetch/evals';
-import EvaluationViewer from '@/components/EvaluationViewer';
+import EvaluationViewer from '@/components/evals/EvaluationViewer';
 
 export default async function QuizPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

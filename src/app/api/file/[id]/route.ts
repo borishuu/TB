@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
-import path from 'path';
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -13,14 +12,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         });
 
         if (!file) {
-            return NextResponse.json({ error: "File not found" }, { status: 404 });
+            return NextResponse.json({ error: "Fichier pas trouvé" }, { status: 404 });
         }
 
         // Delete the file from disk
         try {
             await fs.unlink(file.filePath);
         } catch (fsError) {
-            console.error("Failed to delete physical file:", fsError);
+            console.error("Impossible de trouver fichier :", fsError);
         }
 
         // Delete the file record in DB
@@ -28,10 +27,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             where: { id: fileId },
         });
 
-        return NextResponse.json({ message: "File deleted successfully" }, { status: 200 });
+        return NextResponse.json({ message: "Fichier supprimé avec succès" }, { status: 200 });
 
-    } catch (error) {
-        console.error("Error deleting file:", error);
-        return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
+    } catch (error) {        
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

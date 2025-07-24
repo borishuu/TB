@@ -1,16 +1,17 @@
-'use client';
+'use client'
 
 import { useRouter } from 'next/navigation';
 import { Eval } from '@/types';
-import EvalMenu from '@/components/EvalMenu';
+import EvalMenu from '@/components/evals/EvalMenu';
 
 interface EvalCardProps {
   evaluation: Eval;
+  onEdit: () => void;
   onDelete: () => void;
-  onDuplicate: (newEval: Eval) => void;
+  onDuplicate: (id: number) => void;
 }
 
-export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCardProps) {
+export default function EvalCard({ evaluation, onEdit, onDelete, onDuplicate }: EvalCardProps) {
   const router = useRouter();
   const questionCount = Array.isArray(evaluation.currentVersion?.content.content) ? evaluation.currentVersion?.content.content.length : 0;
 
@@ -40,10 +41,10 @@ export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCard
       return;
     }
 
-    const newEval: Eval = await response.json();
+    const newEvalId: number = await response.json();
 
     // Add to local state in parent
-    onDuplicate(newEval);
+    onDuplicate(newEvalId);
   };
 
   const handleDownload = async () => {
@@ -80,7 +81,7 @@ export default function EvalCard({ evaluation, onDelete, onDuplicate }: EvalCard
   return (
     <div className="relative bg-white shadow-lg rounded-lg p-4 border border-gray-200 hover:shadow-xl transition">
       <div className="absolute top-2 right-2">
-        <EvalMenu onDelete={handleDelete} onDuplicate={handleDuplicate} onDownload={handleDownload} />
+        <EvalMenu onEdit={onEdit} onDelete={handleDelete} onDuplicate={handleDuplicate} onDownload={handleDownload} />
       </div>
       <h2 className="text-xl font-semibold">{evaluation.title}</h2>
       <p className="text-gray-400 text-sm">{(evaluation.course as any).courseName}</p>

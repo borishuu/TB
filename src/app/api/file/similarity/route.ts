@@ -12,34 +12,34 @@ export async function POST(request: NextRequest) {
                 
         const searchString = topics.join(" | "); // PostgreSQL OR operator
 
-        const files = await prisma.file.findMany({
-            where: {
-                OR: [
-                    {
-                      textContent: {
-                        search: searchString,
-                      },
-                    },
-                    {
-                      fileName: {
-                        search: searchString,
-                      },
-                    },
-                ],
-            },
-            orderBy: {
-                _relevance: {
-                    fields: ['textContent'],
-                    search: searchString,
-                    sort: 'desc',
+const files = await prisma.file.findMany({
+    where: {
+        OR: [
+            {
+                textContent: {
+                search: searchString,
                 },
             },
-            take: 5,
-        });    
+            {
+                fileName: {
+                search: searchString,
+                },
+            },
+        ],
+    },
+    orderBy: {
+        _relevance: {
+            fields: ['textContent'],
+            search: searchString,
+            sort: 'desc',
+        },
+    },
+    take: 10,
+});    
 
         return NextResponse.json({ files });
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Failed to login" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }

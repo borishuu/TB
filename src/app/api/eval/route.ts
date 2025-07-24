@@ -2,26 +2,49 @@ import {NextRequest, NextResponse} from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getGenerationHandler } from '@/lib/llm/LLMHandlerFactory';
 import { FileWithContext } from '@/types';
+import { setProgress } from '@/lib/progressStore';
+
+export async function GET(request: NextRequest) {
+    
+    try {
+        const evals = await prisma.evaluation.findMany({
+            include: {
+                currentVersion: true,
+                course: true
+            }
+            
+        });
+
+        return NextResponse.json(evals, { status: 200 });
+         
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    } finally {
+    }
+}
 
 export async function POST(request: NextRequest) {
     const form = await request.formData();
     const title = form.get('title') as string;
-    const contentFiles = form.getAll("contentFiles") as File[];
-    const contentFilesMeta = form.get("contentFilesMeta") as string;
+    const localFiles = form.getAll("contentFiles") as File[];
+    const localFilesMeta = form.get("contentFilesMeta") as string;
     const poolFilesMeta = form.get("poolFilesMeta") as string; 
     const globalDifficulty = form.get("difficulty") as string;
+    const questionCount = form.get("questionCount") as string;
     const questionTypes = form.getAll("questionTypes") as string[];
     const suggestedFileIds = form.getAll("suggestedFileIds").map(id => Number(id));
     const model = form.get("model") as string;
-    const prompts = form.get("prompts") as string;
+    const promptIteration = form.get("prompts") as string;
     const courseIdStr = form.get("courseId") as string;
+    const generationId = form.get("generationId") as string
 
     try {
         if (!title) {
             return NextResponse.json({ error: "Evaluation doit avoir un titre" }, { status: 400 });
         }
 
-        if ((!contentFiles || contentFiles.length === 0) && suggestedFileIds.length === 0) {
+        if ((!localFiles || localFiles.length === 0) && suggestedFileIds.length === 0) {
             return NextResponse.json({ error: "Au moins un fichier doit être fourni" }, { status: 400 });
         }
 
@@ -38,7 +61,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Modèle LLM doit être fourni" }, { status: 400 });
         }
 
-        if (!prompts) {
+        if (!promptIteration) {
             console.log("Prompts not provided");
             return NextResponse.json({ error: "Version des prompts doit être fourni" }, { status: 400 });
         }
@@ -52,9 +75,9 @@ export async function POST(request: NextRequest) {
         // Parse local file metadata
         let parsedMeta: { name: string; contextType: 'course' | 'evalInspiration' }[] = [];
         try {
-            parsedMeta = JSON.parse(contentFilesMeta);
+            parsedMeta = JSON.parse(localFilesMeta);
         } catch (e) {
-            return NextResponse.json({ error: 'Invalid contentFilesMeta JSON' }, { status: 400 });
+            return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
         }
 
         // Parse pool file metadata
@@ -62,12 +85,9 @@ export async function POST(request: NextRequest) {
         try {
             parsedPoolMeta = JSON.parse(poolFilesMeta);
         } catch (e) {
-            return NextResponse.json({ error: 'Invalid poolFilesMeta JSON' }, { status: 400 });
+            return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
         }
 
-        const generationHandler = await getGenerationHandler(model, prompts);
-
-        // TODO: Handle pool files context types
         let poolFiles: { fileName: string, filePath: string, mimeType: string }[] = [];
 
         if (suggestedFileIds.length > 0) {
@@ -82,10 +102,9 @@ export async function POST(request: NextRequest) {
 
           poolFiles = results;
         }
-
-        //const allFiles: (LocalFile | { fileName: string, filePath: string, mimeType: string })[] = [...contentFiles, ...poolFiles];
+        
         const allFiles: FileWithContext[] = [
-            ...contentFiles.map(f => ({ 
+            ...localFiles.map(f => ({ 
                 file: f, 
                 contextType: parsedMeta.find(m => m.name === f.name)?.contextType || 'course' 
             } as FileWithContext)), 
@@ -95,9 +114,17 @@ export async function POST(request: NextRequest) {
             } as FileWithContext))
         ];
 
-        const generationResult = await generationHandler.generateEvaluation({ files: allFiles, questionTypes, globalDifficulty, genModel: model });
+        const generationHandler = await getGenerationHandler(model, promptIteration);
+        const generationResult = await generationHandler.generateEvaluation({ 
+            files: allFiles, 
+            questionTypes, 
+            globalDifficulty, 
+            questionCount, 
+            genModel: model, 
+            generationId 
+        });
      
-
+        setProgress(generationId, 'done');
         // Ensure quizText is valid JSON before saving
         let quizJSON;
         try {
@@ -136,6 +163,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(evaluation.id);
     } catch (error) {
         console.log(error);
-        return NextResponse.json({ error: "Erreur dans la génération de l'évaluation" }, { status: 500 });
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
     }
 }
