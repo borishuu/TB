@@ -32,7 +32,7 @@ export default function EditEvalForm({ onClose, onSuccess, evaluation, courses }
       formData.append('title', title);
       formData.append('courseId', String(selectedCourse || ''));
 
-      const response = await fetch(`/api/eval/${evaluation.id}/question`, {
+      const response = await fetch(`/api/eval/${evaluation.id}`, {
         method: 'PUT',
         body: formData,
       });

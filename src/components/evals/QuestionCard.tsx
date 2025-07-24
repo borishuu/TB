@@ -48,7 +48,7 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
 
     const handleSave = async () => {
         try {
-            const response = await fetch(`/api/eval/${quizId}`, {
+            const response = await fetch(`/api/eval/${quizId}/question`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -292,7 +292,7 @@ export default function QuestionCard({ baseQuestion, quizId, onNewVersion  }: { 
                     onClick={() => setRegentState(!regenState)}
                     className="text-black px-3 py-1 rounded flex items-center space-x-2"
                 >
-                    <ArrowPathIcon className="w-5 h-5" /> <span>Demander regénération</span>
+                    <ArrowPathIcon className="w-5 h-5" /> <span>Demander régénération</span>
                 </button>
             </div>
         </div>

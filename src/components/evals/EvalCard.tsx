@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import { useRouter } from 'next/navigation';
 import { Eval } from '@/types';
@@ -8,7 +8,7 @@ interface EvalCardProps {
   evaluation: Eval;
   onEdit: () => void;
   onDelete: () => void;
-  onDuplicate: (newEval: Eval) => void;
+  onDuplicate: (id: number) => void;
 }
 
 export default function EvalCard({ evaluation, onEdit, onDelete, onDuplicate }: EvalCardProps) {
@@ -41,10 +41,10 @@ export default function EvalCard({ evaluation, onEdit, onDelete, onDuplicate }: 
       return;
     }
 
-    const newEval: Eval = await response.json();
+    const newEvalId: number = await response.json();
 
     // Add to local state in parent
-    onDuplicate(newEval);
+    onDuplicate(newEvalId);
   };
 
   const handleDownload = async () => {

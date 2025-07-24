@@ -58,8 +58,8 @@ export default function EvalsGrid({ evaluations, courses }: EvalGridProps) {
       setEvalList((prev) => prev.filter((ev) => ev.id !== id));
     };
   
-    const handleDuplicate = (newEval: Eval) => {
-      setEvalList((prev) => [newEval, ...prev]);
+    const handleDuplicate = (id: number) => {
+      router.push(`/eval/${id}`);
     };
   
     return (

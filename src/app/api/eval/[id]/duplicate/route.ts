@@ -43,14 +43,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         });
 
         // Set this version as the currentVersion of the duplicated evaluation
-        const updatedEval = await prisma.evaluation.update({
+        await prisma.evaluation.update({
             where: { id: duplicatedEval.id },
             data: {
                 currentVersionId: newVersion.id
             }
         });
 
-        return NextResponse.json(updatedEval, { status: 201 });
+        return NextResponse.json(duplicatedEval.id, { status: 201 });
 
     } catch (error) {
         return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
